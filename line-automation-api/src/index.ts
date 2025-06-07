@@ -14,8 +14,6 @@ const server = http.createServer(app);
 // ตั้งค่า CORS options ทั้ง express และ Socket.IO
 const corsOptions = {
   origin: SERVER_CONFIG.CORS_ORIGIN,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,
 };
 app.use(cors(corsOptions));
 
