@@ -57,15 +57,15 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     ws.send(testMessage);
   }, 1000);
   
-  ws.on('message', (message: any) => {
-    console.log('ได้รับข้อความจาก client:', message.toString());
+  ws.addEventListener('message', (event) => {
+    console.log('ได้รับข้อความจาก client:', event.data.toString());
   });
   
-  ws.on('error', (error: Error) => {
-    console.error('WebSocket error:', error);
+  ws.addEventListener('error', (event) => {
+    console.error('WebSocket error:', event);
   });
   
-  ws.on('close', () => {
+  ws.addEventListener('close', () => {
     console.log('Client ตัดการเชื่อมต่อ WebSocket');
     console.log('WebSocket clients เหลือ:', wss.clients.size);
   });
