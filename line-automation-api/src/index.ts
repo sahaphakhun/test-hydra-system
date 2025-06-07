@@ -42,10 +42,9 @@ mongoose
   .then(() => {
     console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
     
-    // เริ่ม HTTP Server โดยใช้พอร์ตจาก environment เท่านั้น
-    const port = process.env.PORT ? parseInt(process.env.PORT) : SERVER_CONFIG.PORT;
-    server.listen(port, () => {
-      console.log(`API Server กำลังทำงานที่พอร์ต ${port}`);
+    // เริ่ม HTTP Server โดยใช้พอร์ตจาก SERVER_CONFIG
+    server.listen(SERVER_CONFIG.PORT, () => {
+      console.log(`API Server กำลังทำงานที่พอร์ต ${SERVER_CONFIG.PORT}`);
     });
     
     // จัดการการเชื่อมต่อ Socket.IO

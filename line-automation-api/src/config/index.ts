@@ -5,7 +5,7 @@ dotenv.config();
 
 // การตั้งค่าสำหรับเซิร์ฟเวอร์
 export const SERVER_CONFIG = {
-  PORT: process.env.PORT || 3001,
+  PORT: Number(process.env.PORT) || 3001,
   NODE_ENV: process.env.NODE_ENV || 'development',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 };
