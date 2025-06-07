@@ -1,7 +1,7 @@
 FROM node:18-alpine
 WORKDIR /app
 
-# รับค่า NEXT_PUBLIC_API_URL และ NEXT_PUBLIC_WS_URL จาก build-arg/Environment เพื่อ embed ใน Next.js build
+# รับค่า Environment สำหรับเชื่อมต่อ API ภายนอก
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL

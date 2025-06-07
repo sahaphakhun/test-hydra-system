@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+// ใช้ NEXT_PUBLIC_API_URL เสมอ ไม่มี default
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// ถ้าไม่มี API_URL จะแสดง error เมื่อเรียกใช้
+if (!API_URL) {
+  console.error('NEXT_PUBLIC_API_URL ไม่ได้ถูกกำหนด API จะไม่สามารถทำงานได้');
+}
 
 const api = axios.create({
   baseURL: API_URL,

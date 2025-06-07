@@ -38,5 +38,13 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Environment Variables
 
 สร้างไฟล์ `.env.local` ในโฟลเดอร์ `line-automation-ui` แล้วเพิ่ม:
-- NEXT_PUBLIC_API_URL=https://<your-api-service-domain>
-- NEXT_PUBLIC_WS_URL=<your-backend-domain>
+-NEXT_PUBLIC_API_URL=https://<api-ภายนอก-domain>/  (ต้องมี / ต่อท้าย)
+-NEXT_PUBLIC_WS_URL=wss://<api-ภายนอก-domain>  (ต้องขึ้นต้นด้วย wss://)
+
+ตัวอย่าง:
+```
+NEXT_PUBLIC_API_URL=https://api.example.com/
+NEXT_PUBLIC_WS_URL=wss://api.example.com
+```
+
+การตั้งค่านี้ใช้สำหรับเชื่อมต่อกับ API ภายนอกเท่านั้น ไม่ใช่ API Service ที่เราพัฒนาเอง

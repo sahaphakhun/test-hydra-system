@@ -28,11 +28,17 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [connected, setConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    // ใช้ค่า Server URL จาก environment หรือ default เป็น localhost
-    const WS_URL = process.env.NEXT_PUBLIC_WS_URL!;
+    // ใช้ NEXT_PUBLIC_WS_URL เสมอ ไม่มี default
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
+    
+    // ถ้าไม่มี WS_URL จะไม่เชื่อมต่อ WebSocket
+    if (!WS_URL) {
+      console.error('NEXT_PUBLIC_WS_URL ไม่ได้ถูกกำหนด ไม่สามารถเชื่อมต่อ WebSocket ได้');
+      return;
+    }
     
     // สร้าง WebSocket เมื่อ component mount
-    const ws = new WebSocket(`wss://${WS_URL.replace(/^https?:\/\//, '')}`);
+    const ws = new WebSocket(WS_URL);
     setSocket(ws);
 
     // จัดการกับ events ต่างๆ
