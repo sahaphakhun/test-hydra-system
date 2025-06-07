@@ -30,7 +30,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     // ใช้ค่า Server URL จาก environment หรือ default เป็น localhost
-    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL!;
     
     // สร้าง Socket เมื่อ component mount
     const newSocket = io(SERVER_URL);
