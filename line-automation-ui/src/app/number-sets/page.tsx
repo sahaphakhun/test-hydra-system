@@ -1,3 +1,6 @@
+// 'use client' directive enables client-side React hooks
+'use client';
+
 import { useState } from 'react';
 import {
   Container,
