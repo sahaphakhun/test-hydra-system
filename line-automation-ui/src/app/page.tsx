@@ -14,10 +14,12 @@ import AccountCard from '@/components/ui/AccountCard';
 import CreateAccountDialog from '@/components/ui/CreateAccountDialog';
 import { Account, CreateAccountData } from '@/types/account';
 import api from '@/lib/api';
+import OtpDialog from '@/components/ui/OtpDialog';
 
 export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [otpDialog, setOtpDialog] = useState<{ phoneNumber: string; open: boolean }>({ phoneNumber: '', open: false });
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
@@ -38,14 +40,51 @@ export default function HomePage() {
     localStorage.setItem('line-accounts', JSON.stringify(accounts));
   }, [accounts]);
 
+  // WebSocket เพื่อติดตามสถานะ
+  useEffect(() => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) {
+      console.warn('NEXT_PUBLIC_WS_URL is not defined. ไม่สามารถเชื่อมต่อ WebSocket');
+      return;
+    }
+
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'statusUpdate' && data.phoneNumber) {
+          setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: data.status } : acc));
+
+          if (data.status === 'awaitingOtp') {
+            setOtpDialog({ phoneNumber: data.phoneNumber, open: true });
+          }
+        }
+      } catch (err) {
+        console.error('Invalid WS message', err);
+      }
+    };
+
+    socket.onerror = console.error;
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
   const handleCreateAccount = async (data: CreateAccountData) => {
     try {
       // เรียก API สร้างบัญชี
-      await api.post('/automation/register', data);
+      await api.post('/automation/register', {
+        phoneNumber: data.phoneNumber,
+        displayName: data.name,
+        password: data.password,
+        proxy: data.proxy,
+      });
       
       // สร้างบัญชีใหม่ใน state
       const newAccount: Account = {
-        id: Date.now().toString(),
+        id: data.phoneNumber, // ใช้ phoneNumber เพื่อป้องกันสับสน
         name: data.name,
         phoneNumber: data.phoneNumber,
         password: data.password,
@@ -74,6 +113,27 @@ export default function HomePage() {
     setMessage('ลบบัญชีสำเร็จ');
     setMessageType('success');
   };
+
+  const handleSubmitOtp = async (otp: string) => {
+    try {
+      await api.post('/automation/submit-otp', {
+        phoneNumber: otpDialog.phoneNumber,
+        otp,
+      });
+      setMessage('ส่ง OTP สำเร็จ');
+      setMessageType('success');
+      // ปิด dialog
+      setOtpDialog({ phoneNumber: '', open: false });
+      // อัปเดตสถานะบัญชีให้ pending อีกครั้ง รอผลลัพธ์สุดท้าย
+      setAccounts(prev => prev.map(acc => acc.phoneNumber === otpDialog.phoneNumber ? { ...acc, status: 'pending' } : acc));
+    } catch (error) {
+      console.error('ส่ง OTP ไม่สำเร็จ', error);
+      setMessage('เกิดข้อผิดพลาดในการส่ง OTP');
+      setMessageType('error');
+    }
+  };
+
+  const closeOtpDialog = () => setOtpDialog({ phoneNumber: '', open: false });
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -146,6 +206,14 @@ export default function HomePage() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSubmit={handleCreateAccount}
+      />
+
+      {/* OTP Dialog */}
+      <OtpDialog
+        open={otpDialog.open}
+        phoneNumber={otpDialog.phoneNumber}
+        onSubmit={handleSubmitOtp}
+        onClose={closeOtpDialog}
       />
 
       {/* Snackbar for messages */}

@@ -25,8 +25,10 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
   const getStatusColor = (status: Account['status']) => {
     switch (status) {
       case 'active':
+      case 'success':
         return 'success';
       case 'pending':
+      case 'awaitingOtp':
         return 'warning';
       default:
         return 'error';
@@ -36,9 +38,14 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
   const getStatusText = (status: Account['status']) => {
     switch (status) {
       case 'active':
+      case 'success':
         return 'ใช้งานได้';
       case 'pending':
-        return 'รอยืนยัน';
+        return 'กำลังดำเนินการ';
+      case 'awaitingOtp':
+        return 'รอ OTP';
+      case 'error':
+        return 'ผิดพลาด';
       default:
         return 'ไม่ได้ใช้งาน';
     }
