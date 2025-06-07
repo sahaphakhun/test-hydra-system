@@ -29,10 +29,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     // ใช้ค่า Server URL จาก environment หรือ default เป็น localhost
-    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL!;
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL!;
     
     // สร้าง WebSocket เมื่อ component mount
-    const ws = new WebSocket(`wss://${SERVER_URL.replace(/^https?:\/\//, '')}`);
+    const ws = new WebSocket(`wss://${WS_URL.replace(/^https?:\/\//, '')}`);
     setSocket(ws);
 
     // จัดการกับ events ต่างๆ

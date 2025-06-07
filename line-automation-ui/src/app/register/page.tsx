@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,10 +42,32 @@ const RegisterPage = () => {
     resolver: zodResolver(registerFormSchema),
   });
 
+  // ดึงข้อมูล accounts จาก localStorage เมื่อ component ติดตั้ง
+  useEffect(() => {
+    const storedAccounts = localStorage.getItem('accounts');
+    if (storedAccounts) {
+      setAccounts(JSON.parse(storedAccounts));
+    }
+  }, []);
+
+  // บันทึกข้อมูล accounts ทุกครั้งที่มีการเปลี่ยนแปลง
+  useEffect(() => {
+    localStorage.setItem('accounts', JSON.stringify(accounts));
+  }, [accounts]);
+
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     try {
       await registerLineAccount(data);
+      // เพิ่มบัญชีใหม่ใน state
+      const newAccount: LineAccount = {
+        id: data.phoneNumber,
+        phoneNumber: data.phoneNumber,
+        displayName: data.displayName,
+        createdAt: new Date().toISOString(),
+        status: 'inactive',
+      };
+      setAccounts(prev => [...prev, newAccount]);
       setIsModalOpen(false);
       setIsOtpModalOpen(true);
     } catch (error) {
