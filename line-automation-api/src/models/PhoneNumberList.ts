@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { PhoneNumberList } from '../types';
 
 // สร้าง interface ที่ extend Document ของ Mongoose
-export interface IPhoneNumberList extends PhoneNumberList, Document {}
+export interface IPhoneNumberList extends Document, Omit<PhoneNumberList, 'id'> {}
 
 // สร้าง Schema สำหรับ PhoneNumberList
 const PhoneNumberListSchema: Schema = new Schema(

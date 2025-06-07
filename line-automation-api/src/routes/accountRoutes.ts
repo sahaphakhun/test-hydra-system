@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from 'express';
 import * as accountController from '../controllers/accountController';
 

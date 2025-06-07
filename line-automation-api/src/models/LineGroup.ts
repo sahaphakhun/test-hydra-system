@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { LineGroup } from '../types';
 
 // สร้าง interface ที่ extend Document ของ Mongoose
-export interface ILineGroup extends LineGroup, Document {}
+export interface ILineGroup extends Document, Omit<LineGroup, 'id'> {}
 
 // สร้าง Schema สำหรับ LineGroup
 const LineGroupSchema: Schema = new Schema(

@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { LineAccount } from '../types';
 
 // สร้าง interface ที่ extend Document ของ Mongoose
-export interface ILineAccount extends LineAccount, Document {}
+export interface ILineAccount extends Document, Omit<LineAccount, 'id'> {}
 
 // สร้าง Schema สำหรับ LineAccount
 const LineAccountSchema: Schema = new Schema(

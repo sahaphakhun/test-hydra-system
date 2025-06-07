@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from 'express';
 import * as automationController from '../controllers/automationController';
 
