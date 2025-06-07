@@ -11,12 +11,17 @@ import { setSocketIO } from './controllers/automationController';
 const app = express();
 const server = http.createServer(app);
 
-// ตั้งค่า Socket.IO
+// ตั้งค่า CORS options ทั้ง express และ Socket.IO
+const corsOptions = {
+  origin: SERVER_CONFIG.CORS_ORIGIN,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// ตั้งค่า Socket.IO พร้อม CORS
 const io = new Server(server, {
-  cors: {
-    origin: SOCKET_CONFIG.CORS_ORIGIN,
-    methods: ['GET', 'POST'],
-  },
+  cors: corsOptions,
 });
 
 // ส่ง Socket.IO instance ให้กับ controller
@@ -24,9 +29,6 @@ setSocketIO(io);
 
 // Middleware
 app.use(express.json());
-app.use(cors({
-  origin: SERVER_CONFIG.CORS_ORIGIN,
-}));
 
 // Routes
 app.use('/', automationRoutes);
@@ -38,9 +40,10 @@ mongoose
   .then(() => {
     console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
     
-    // เริ่ม HTTP Server
-    server.listen(SERVER_CONFIG.PORT, () => {
-      console.log(`API Server กำลังทำงานที่พอร์ต ${SERVER_CONFIG.PORT}`);
+    // เริ่ม HTTP Server โดยใช้พอร์ตจาก environment เท่านั้น
+    const port = process.env.PORT ? parseInt(process.env.PORT) : SERVER_CONFIG.PORT;
+    server.listen(port, () => {
+      console.log(`API Server กำลังทำงานที่พอร์ต ${port}`);
     });
     
     // จัดการการเชื่อมต่อ Socket.IO
