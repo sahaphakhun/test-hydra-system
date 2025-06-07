@@ -65,18 +65,21 @@ export default function HomePage() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'statusUpdate' && data.phoneNumber) {
-          setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: data.status } : acc));
+          // บางกรณี backend อาจส่งสถานะในรูปแบบอื่น ๆ เช่น otpWait, otp_wait
+          const rawStatus: string = data.status;
+          const normalizedStatus = (rawStatus === 'otpWait' || rawStatus === 'otp_wait') ? 'awaitingOtp' : (rawStatus as Account['status']);
 
-          if (data.status === 'awaitingOtp') {
+          // อัปเดตสถานะใน state
+          setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc));
+
+          if (normalizedStatus === 'awaitingOtp') {
             setOtpDialog({ phoneNumber: data.phoneNumber, open: true });
-            if (waitingPhoneNumber === data.phoneNumber) {
-              setWaitingPhoneNumber(null);
-            }
-          } else if (['success', 'error', 'timeout'].includes(data.status)) {
-            if (waitingPhoneNumber === data.phoneNumber) {
-              setWaitingPhoneNumber(null);
-            }
+            setWaitingPhoneNumber(null);
+          } else if (['success', 'error', 'timeout'].includes(normalizedStatus)) {
+            setWaitingPhoneNumber(null);
           }
+
+          return; // จบ early
         }
       } catch (err) {
         console.error('Invalid WS message', err);
@@ -88,7 +91,7 @@ export default function HomePage() {
     return () => {
       socket.close();
     };
-  }, [waitingPhoneNumber]);
+  }, []);
 
   const handleCreateAccount = async (data: CreateAccountData) => {
     try {
