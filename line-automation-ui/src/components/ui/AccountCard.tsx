@@ -29,6 +29,7 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
         return 'success';
       case 'pending':
       case 'awaitingOtp':
+      case 'timeout':
         return 'warning';
       default:
         return 'error';
@@ -44,6 +45,8 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
         return 'กำลังดำเนินการ';
       case 'awaitingOtp':
         return 'รอ OTP';
+      case 'timeout':
+        return 'หมดเวลา OTP';
       case 'error':
         return 'ผิดพลาด';
       default:

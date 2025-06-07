@@ -4,7 +4,7 @@ export interface Account {
   phoneNumber: string;
   password: string;
   proxy?: string;
-  status: 'active' | 'inactive' | 'pending' | 'awaitingOtp' | 'success' | 'error';
+  status: 'active' | 'inactive' | 'pending' | 'awaitingOtp' | 'success' | 'error' | 'timeout';
   createdAt: string;
   lastActive?: string;
 }

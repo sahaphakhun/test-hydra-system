@@ -8,6 +8,8 @@ import {
   Box,
   Alert,
   Snackbar,
+  Backdrop,
+  CircularProgress,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import AccountCard from '@/components/ui/AccountCard';
@@ -22,6 +24,7 @@ export default function HomePage() {
   const [otpDialog, setOtpDialog] = useState<{ phoneNumber: string; open: boolean }>({ phoneNumber: '', open: false });
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [waitingPhoneNumber, setWaitingPhoneNumber] = useState<string | null>(null);
 
   // โหลดข้อมูลบัญชีจาก localStorage เมื่อเริ่มต้น
   useEffect(() => {
@@ -29,6 +32,12 @@ export default function HomePage() {
     if (savedAccounts) {
       try {
         setAccounts(JSON.parse(savedAccounts));
+        // if there is account awaiting otp, open dialog automatically
+        const parsed: Account[] = JSON.parse(savedAccounts);
+        const awaiting = parsed.find((acc) => acc.status === 'awaitingOtp');
+        if (awaiting) {
+          setOtpDialog({ phoneNumber: awaiting.phoneNumber, open: true });
+        }
       } catch (error) {
         console.error('Failed to parse saved accounts:', error);
       }
@@ -60,6 +69,13 @@ export default function HomePage() {
 
           if (data.status === 'awaitingOtp') {
             setOtpDialog({ phoneNumber: data.phoneNumber, open: true });
+            if (waitingPhoneNumber === data.phoneNumber) {
+              setWaitingPhoneNumber(null);
+            }
+          } else if (['success', 'error', 'timeout'].includes(data.status)) {
+            if (waitingPhoneNumber === data.phoneNumber) {
+              setWaitingPhoneNumber(null);
+            }
           }
         }
       } catch (err) {
@@ -72,7 +88,7 @@ export default function HomePage() {
     return () => {
       socket.close();
     };
-  }, []);
+  }, [waitingPhoneNumber]);
 
   const handleCreateAccount = async (data: CreateAccountData) => {
     try {
@@ -83,6 +99,8 @@ export default function HomePage() {
         password: data.password,
         proxy: data.proxy,
       });
+      
+      setWaitingPhoneNumber(data.phoneNumber);
       
       // สร้างบัญชีใหม่ใน state
       const newAccount: Account = {
@@ -217,6 +235,16 @@ export default function HomePage() {
         onSubmit={handleSubmitOtp}
         onClose={closeOtpDialog}
       />
+
+      {/* Backdrop while waiting for awaitingOtp */}
+      <Backdrop open={waitingPhoneNumber !== null} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Box textAlign="center">
+          <CircularProgress color="inherit" />
+          <Typography variant="h6" mt={2}>
+            กำลังรอ OTP สำหรับ {waitingPhoneNumber}
+          </Typography>
+        </Box>
+      </Backdrop>
 
       {/* Snackbar for messages */}
       <Snackbar
