@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment Variables
+
+สร้างไฟล์ `.env.local` ในโฟลเดอร์ `line-automation-ui` แล้วเพิ่ม:
+
+NEXT_PUBLIC_API_URL=https://<api-ภายนอก-domain>/  (ต้องมี / ต่อท้าย)
+NEXT_PUBLIC_WS_URL=wss://<api-ภายนอก-domain>  (ต้องขึ้นต้นด้วย wss://)
+
+ตัวอย่าง:
+```
+NEXT_PUBLIC_API_URL=https://api.example.com/
+NEXT_PUBLIC_WS_URL=wss://api.example.com
+```
+
+การตั้งค่านี้ใช้สำหรับเชื่อมต่อกับ API ภายนอกเท่านั้น ไม่ใช่ API Service ที่เราพัฒนาเอง
