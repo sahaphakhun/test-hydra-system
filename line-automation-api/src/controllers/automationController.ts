@@ -134,7 +134,7 @@ const sendStatusUpdate = (status: string, message: string, details?: any) => {
   console.log(`🔔 Sending statusUpdate: status=${status}, message=${message}, details=`, details);
   if (wss) {
     console.log(`🔔 WebSocket clients count: ${wss.clients.size}`);
-    wss.clients.forEach((client) => {
+    wss.clients.forEach((client: WebSocket) => {
       if (client.readyState === WebSocket.OPEN) {
         const payload = JSON.stringify({
           type: 'statusUpdate',

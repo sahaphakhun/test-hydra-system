@@ -1,29 +1,26 @@
 # Stage 1: Build frontend
-FROM node:18-alpine AS builder
-WORKDIR /app/line-automation-ui
+FROM node:20-alpine as builder
+WORKDIR /app
 
 # Install dependencies for UI
-COPY line-automation-ui/package*.json ./
+COPY package*.json ./
 RUN npm install
 
 # Copy UI source code
-COPY line-automation-ui ./
+COPY . .
 
 # Build Next.js app
-RUN npm run build
+# RUN npm run build
 
 # Stage 2: Prepare runtime
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 
 # Copy built UI
-COPY --from=builder /app/line-automation-ui/.next ./.next
-COPY --from=builder /app/line-automation-ui/public ./public
-
-# Copy only production dependencies
-COPY line-automation-ui/package*.json ./
-RUN npm install --production
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/src ./src
 
 # Expose port and start server
-EXPOSE 8080
-CMD ["npm", "start"] 
+EXPOSE 3000
+CMD ["npm", "run", "start:ts"] 

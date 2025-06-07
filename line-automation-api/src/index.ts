@@ -33,7 +33,7 @@ app.use('/', automationRoutes);
 app.use('/', accountRoutes);
 
 // จัดการการเชื่อมต่อ WebSocket
-wss.on('connection', (ws, req) => {
+wss.on('connection', (ws: WebSocket, req: any) => {
   console.log('Client เชื่อมต่อ WebSocket จาก:', req.socket.remoteAddress);
   console.log('WebSocket clients ทั้งหมด:', wss.clients.size);
   
@@ -57,11 +57,11 @@ wss.on('connection', (ws, req) => {
     ws.send(testMessage);
   }, 1000);
   
-  ws.on('message', (message) => {
+  ws.on('message', (message: any) => {
     console.log('ได้รับข้อความจาก client:', message.toString());
   });
   
-  ws.on('error', (error) => {
+  ws.on('error', (error: Error) => {
     console.error('WebSocket error:', error);
   });
   
