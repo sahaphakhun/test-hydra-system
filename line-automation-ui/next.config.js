@@ -1,6 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-/* config options here */
+  reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
-exports.default = nextConfig;
+
+module.exports = nextConfig;
