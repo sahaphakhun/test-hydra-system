@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { Server } from 'socket.io';
+import { WebSocketServer, WebSocket } from 'ws';
 import LineAccount from '../models/LineAccount';
 import { AutomationStatus, RegisterRequest, OtpRequest } from '../types';
 
-// สำหรับเก็บ Socket.IO instance ที่จะใช้ส่งข้อมูลสถานะแบบ Real-time
-let io: Server;
+// สำหรับเก็บ WebSocket server instance
+let wss: WebSocketServer;
 
-// ตั้งค่า Socket.IO instance
-export const setSocketIO = (socketIO: Server) => {
-  io = socketIO;
+// ตั้งค่า WebSocket server instance
+export const setWebSocketServer = (webSocketServer: WebSocketServer) => {
+  wss = webSocketServer;
 };
 
 // สำหรับเก็บข้อมูล OTP ที่ได้รับจากผู้ใช้
@@ -21,6 +21,7 @@ export const testConnection = (req: Request, res: Response) => {
 
 // เริ่มกระบวนการลงทะเบียน
 export const registerLine = async (req: Request, res: Response) => {
+  console.log('▶️ registerLine called, body:', req.body);
   try {
     const { phoneNumber, displayName, password, proxy }: RegisterRequest = req.body;
 
@@ -57,6 +58,7 @@ export const registerLine = async (req: Request, res: Response) => {
 
 // รับและบันทึกค่า OTP
 export const submitOtp = async (req: Request, res: Response) => {
+  console.log('▶️ submitOtp called, body:', req.body);
   try {
     const { otp }: OtpRequest = req.body;
     
@@ -98,6 +100,7 @@ export const submitOtp = async (req: Request, res: Response) => {
 
 // รับการอัปเดตสถานะจาก Automation Runner และส่งต่อให้ Frontend ผ่าน WebSocket
 export const receiveStatus = (req: Request, res: Response) => {
+  console.log('▶️ receiveStatus called, body:', req.body);
   try {
     const { status, message, details } = req.body;
     
@@ -126,14 +129,19 @@ export const logout = (req: Request, res: Response) => {
   }
 };
 
-// ฟังก์ชันสำหรับส่งข้อมูลสถานะผ่าน Socket.IO
+// ฟังก์ชันสำหรับส่งข้อมูลสถานะผ่าน WebSocket
 const sendStatusUpdate = (status: string, message: string, details?: any) => {
-  if (io) {
-    io.emit('statusUpdate', {
-      type: 'statusUpdate',
-      status,
-      message,
-      details,
+  console.log(`🔔 Sending statusUpdate: status=${status}, message=${message}, details=`, details);
+  if (wss) {
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'statusUpdate',
+          status,
+          message,
+          details,
+        }));
+      }
     });
   }
 };
