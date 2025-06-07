@@ -13,9 +13,6 @@ const WebSocketContext = createContext<IWebSocketContext>({
 });
 
 const WS_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL;
-if (!WS_ENDPOINT) {
-  throw new Error('Environment variable NEXT_PUBLIC_WS_URL is not defined');
-}
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
@@ -23,6 +20,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   // connect once
   useEffect(() => {
+    if (!WS_ENDPOINT) {
+      console.warn('NEXT_PUBLIC_WS_URL is not defined, WebSocket disabled');
+      return;
+    }
+
     const socket = new WebSocket(WS_ENDPOINT);
     socketRef.current = socket;
 
