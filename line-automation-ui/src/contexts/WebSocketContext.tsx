@@ -12,7 +12,10 @@ const WebSocketContext = createContext<IWebSocketContext>({
   isConnected: false,
 });
 
-const WS_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001/ws';
+const WS_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL;
+if (!WS_ENDPOINT) {
+  throw new Error('Environment variable NEXT_PUBLIC_WS_URL is not defined');
+}
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
