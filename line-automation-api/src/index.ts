@@ -14,8 +14,12 @@ const server = http.createServer(app);
 // ตั้งค่า CORS options ทั้ง express และ Socket.IO
 const corsOptions = {
   origin: SERVER_CONFIG.CORS_ORIGIN,
+  methods: ['GET', 'POST', 'OPTIONS'],
 };
+// Enable CORS for Express
 app.use(cors(corsOptions));
+// Enable preflight across all routes
+app.options('*', cors(corsOptions));
 
 // ตั้งค่า Socket.IO พร้อม CORS
 const io = new Server(server, {
