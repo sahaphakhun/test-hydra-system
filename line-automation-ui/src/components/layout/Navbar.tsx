@@ -8,6 +8,7 @@ const links = [
   { href: '/send-message', label: 'ส่งข้อความ' },
   { href: '/create-group', label: 'สร้างกลุ่ม' },
   { href: '/add-friends', label: 'เพิ่มเพื่อน' },
+  { href: '/number-sets', label: 'ชุดเบอร์' },
   { href: '/register', label: 'ลงทะเบียน' },
 ];
 

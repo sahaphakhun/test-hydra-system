@@ -14,12 +14,13 @@ import { useEffect, useState } from 'react';
 interface OtpDialogProps {
   open: boolean;
   phoneNumber: string;
+  startTime?: number; // timestamp เมื่อ backend ส่ง awaitingOtp
   timeoutMs?: number; // default 5 min
   onSubmit: (otp: string) => Promise<void>;
   onClose: () => void;
 }
 
-export default function OtpDialog({ open, phoneNumber, timeoutMs = 5 * 60 * 1000, onSubmit, onClose }: OtpDialogProps) {
+export default function OtpDialog({ open, phoneNumber, startTime, timeoutMs = 5 * 60 * 1000, onSubmit, onClose }: OtpDialogProps) {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState(timeoutMs);
@@ -27,18 +28,15 @@ export default function OtpDialog({ open, phoneNumber, timeoutMs = 5 * 60 * 1000
   // countdown timer
   useEffect(() => {
     if (!open) return;
-    setRemaining(timeoutMs);
+    // คำนวณเวลาที่เหลือจาก startTime หากมี
+    const now = Date.now();
+    const initialRemaining = startTime ? Math.max(timeoutMs - (now - startTime), 0) : timeoutMs;
+    setRemaining(initialRemaining);
     const interval = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1000) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1000;
-      });
+      setRemaining((prev) => (prev <= 1000 ? 0 : prev - 1000));
     }, 1000);
     return () => clearInterval(interval);
-  }, [open, timeoutMs]);
+  }, [open, startTime, timeoutMs]);
 
   const handleSubmit = async () => {
     if (!otp.trim()) return;

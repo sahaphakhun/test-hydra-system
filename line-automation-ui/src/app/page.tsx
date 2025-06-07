@@ -21,7 +21,7 @@ import OtpDialog from '@/components/ui/OtpDialog';
 export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [otpDialog, setOtpDialog] = useState<{ phoneNumber: string; open: boolean }>({ phoneNumber: '', open: false });
+  const [otpDialog, setOtpDialog] = useState<{ phoneNumber: string; open: boolean; startTime?: number }>({ phoneNumber: '', open: false });
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [waitingPhoneNumber, setWaitingPhoneNumber] = useState<string | null>(null);
@@ -36,7 +36,16 @@ export default function HomePage() {
         const parsed: Account[] = JSON.parse(savedAccounts);
         const awaiting = parsed.find((acc) => acc.status === 'awaitingOtp');
         if (awaiting) {
-          setOtpDialog({ phoneNumber: awaiting.phoneNumber, open: true });
+          // อ่าน timestamp จาก localStorage หากมี เพื่อรักษา countdown
+          let startTime: number | undefined;
+          try {
+            const raw = localStorage.getItem('otpWaitingData');
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data.phoneNumber === awaiting.phoneNumber) startTime = data.startTime;
+            }
+          } catch {}
+          setOtpDialog({ phoneNumber: awaiting.phoneNumber, open: true, startTime });
         }
       } catch (error) {
         console.error('Failed to parse saved accounts:', error);
@@ -73,10 +82,15 @@ export default function HomePage() {
           setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc));
 
           if (normalizedStatus === 'awaitingOtp') {
-            setOtpDialog({ phoneNumber: data.phoneNumber, open: true });
+            const now = Date.now();
+            // บันทึก timestamp เพื่อให้ reload คง countdown ต่อเนื่อง
+            try { localStorage.setItem('otpWaitingData', JSON.stringify({ phoneNumber: data.phoneNumber, startTime: now })); } catch {}
+            setOtpDialog({ phoneNumber: data.phoneNumber, open: true, startTime: now });
             setWaitingPhoneNumber(null);
           } else if (['success', 'error', 'timeout'].includes(normalizedStatus)) {
+            // ล้างข้อมูล waiting และ otpWaitingData เมื่อจบ
             setWaitingPhoneNumber(null);
+            try { localStorage.removeItem('otpWaitingData'); } catch {}
           }
 
           return; // จบ early
@@ -149,6 +163,8 @@ export default function HomePage() {
       setOtpDialog({ phoneNumber: '', open: false });
       // อัปเดตสถานะบัญชีให้ pending อีกครั้ง รอผลลัพธ์สุดท้าย
       setAccounts(prev => prev.map(acc => acc.phoneNumber === otpDialog.phoneNumber ? { ...acc, status: 'pending' } : acc));
+      // ล้าง timestamp
+      try { localStorage.removeItem('otpWaitingData'); } catch {}
     } catch (error) {
       console.error('ส่ง OTP ไม่สำเร็จ', error);
       setMessage('เกิดข้อผิดพลาดในการส่ง OTP');
