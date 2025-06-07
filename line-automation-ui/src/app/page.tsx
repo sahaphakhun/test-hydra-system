@@ -42,11 +42,13 @@ export default function HomePage() {
 
   // WebSocket เพื่อติดตามสถานะ
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) {
+    const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!rawWsUrl) {
       console.warn('NEXT_PUBLIC_WS_URL is not defined. ไม่สามารถเชื่อมต่อ WebSocket');
       return;
     }
+
+    const wsUrl = rawWsUrl.replace(/^http/, 'ws');
 
     const socket = new WebSocket(wsUrl);
 
