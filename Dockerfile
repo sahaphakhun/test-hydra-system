@@ -25,5 +25,5 @@ COPY line-automation-ui/package*.json ./
 RUN npm install --production
 
 # Expose port and start server
-EXPOSE 3000
+EXPOSE 8080
 CMD ["npm", "start"] 
