@@ -1,16 +1,16 @@
 # Stage 1: Build frontend
 FROM node:18-alpine AS builder
-WORKDIR /app
+WORKDIR /app/line-automation-ui
 
 # Install dependencies for UI
 COPY line-automation-ui/package*.json ./
-RUN npm install --prefix ./line-automation-ui
+RUN npm install
 
 # Copy UI source code
-COPY line-automation-ui ./line-automation-ui
+COPY line-automation-ui ./
 
 # Build Next.js app
-RUN npm run build --prefix ./line-automation-ui
+RUN npm run build
 
 # Stage 2: Prepare runtime
 FROM node:18-alpine
