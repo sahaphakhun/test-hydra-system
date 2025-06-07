@@ -48,7 +48,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     ws.onmessage = (event) => {
       try {
+        console.log('WebSocket ได้รับข้อมูล:', event.data);
         const data = JSON.parse(event.data);
+        console.log('WebSocket parsed data:', data);
         if (data.type === 'statusUpdate') {
           console.log('สถานะ:', data.status, data.message);
           setStatus(data.status);

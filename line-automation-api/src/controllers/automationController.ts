@@ -133,15 +133,22 @@ export const logout = (req: Request, res: Response) => {
 const sendStatusUpdate = (status: string, message: string, details?: any) => {
   console.log(`🔔 Sending statusUpdate: status=${status}, message=${message}, details=`, details);
   if (wss) {
+    console.log(`🔔 WebSocket clients count: ${wss.clients.size}`);
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
+        const payload = JSON.stringify({
           type: 'statusUpdate',
           status,
           message,
           details,
-        }));
+        });
+        console.log(`🔔 Sending to client: ${payload}`);
+        client.send(payload);
+      } else {
+        console.log(`🔔 Client not ready: ${client.readyState}`);
       }
     });
+  } else {
+    console.log(`🔔 WebSocket server not initialized!`);
   }
 };

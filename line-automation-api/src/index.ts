@@ -33,17 +33,41 @@ app.use('/', automationRoutes);
 app.use('/', accountRoutes);
 
 // จัดการการเชื่อมต่อ WebSocket
-wss.on('connection', (ws) => {
-  console.log('Client เชื่อมต่อ WebSocket');
+wss.on('connection', (ws, req) => {
+  console.log('Client เชื่อมต่อ WebSocket จาก:', req.socket.remoteAddress);
+  console.log('WebSocket clients ทั้งหมด:', wss.clients.size);
   
   // ส่งข้อความเมื่อเชื่อมต่อสำเร็จ
-  ws.send(JSON.stringify({
+  const connectionMessage = JSON.stringify({
     type: 'connection',
     message: 'Connection to status server established.'
-  }));
+  });
+  console.log('ส่งข้อความเชื่อมต่อ:', connectionMessage);
+  ws.send(connectionMessage);
+  
+  // ทดสอบส่งข้อความสถานะทันที
+  setTimeout(() => {
+    const testMessage = JSON.stringify({
+      type: 'statusUpdate',
+      status: 'test',
+      message: 'ทดสอบการเชื่อมต่อ WebSocket',
+      details: { time: new Date().toISOString() }
+    });
+    console.log('ส่งข้อความทดสอบ:', testMessage);
+    ws.send(testMessage);
+  }, 1000);
+  
+  ws.on('message', (message) => {
+    console.log('ได้รับข้อความจาก client:', message.toString());
+  });
+  
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
   
   ws.on('close', () => {
     console.log('Client ตัดการเชื่อมต่อ WebSocket');
+    console.log('WebSocket clients เหลือ:', wss.clients.size);
   });
 });
 

@@ -174,9 +174,11 @@ const RegisterPage = () => {
         title="กรอกรหัส OTP"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            {statusMessage || 'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS'}
-          </p>
+          {/* แสดงสถานะปัจจุบัน */}
+          <div className="text-sm bg-gray-50 p-3 rounded-md mb-3">
+            <p className="font-medium mb-1">สถานะปัจจุบัน: <span className="text-blue-600">{status || 'รอการตอบกลับ'}</span></p>
+            <p className="text-gray-600">{statusMessage || 'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS'}</p>
+          </div>
           <Input
             label="รหัส OTP"
             placeholder="กรอกรหัส OTP 6 หลัก"
