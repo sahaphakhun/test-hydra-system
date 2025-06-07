@@ -41,7 +41,7 @@ export default function HomePage() {
   const handleCreateAccount = async (data: CreateAccountData) => {
     try {
       // เรียก API สร้างบัญชี
-      await api.post('/register', data);
+      await api.post('/automation/register', data);
       
       // สร้างบัญชีใหม่ใน state
       const newAccount: Account = {

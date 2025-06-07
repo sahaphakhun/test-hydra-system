@@ -13,7 +13,7 @@ export default function SendMessagePage() {
     if (!message.trim()) return;
     setLoading(true);
     try {
-      await api.post('/send-message', { message });
+      await api.post('/automation/submit-otp', { otp: message });
       setSuccess('ส่งข้อความสำเร็จ');
       setMessage('');
     } catch {
