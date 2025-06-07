@@ -121,7 +121,7 @@ export default function HomePage() {
       
       // สร้างบัญชีใหม่ใน state
       const newAccount: Account = {
-        id: data.phoneNumber, // ใช้ phoneNumber เพื่อป้องกันสับสน
+        id: data.phoneNumber,
         name: data.name,
         phoneNumber: data.phoneNumber,
         password: data.password,
