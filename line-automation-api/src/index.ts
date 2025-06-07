@@ -18,8 +18,6 @@ const corsOptions = {
 };
 // Enable CORS for Express
 app.use(cors(corsOptions));
-// Enable preflight across all routes
-app.options('*', cors(corsOptions));
 
 // ตั้งค่า Socket.IO พร้อม CORS
 const io = new Server(server, {
