@@ -80,6 +80,35 @@ export default function AdminPage() {
     fetchRequests();
   }, []);
 
+  // เชื่อมต่อ WebSocket เพื่ออัปเดตสถานะแบบ real-time
+  useEffect(() => {
+    const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!rawWsUrl) {
+      console.warn('NEXT_PUBLIC_WS_URL is not defined. ไม่สามารถเชื่อมต่อ WebSocket');
+      return;
+    }
+
+    const wsUrl = rawWsUrl.replace(/^http/, 'ws');
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'statusUpdate' && data.details?.requestId) {
+          // รีเฟรชรายการคำขอเมื่อมีการอัปเดตสถานะ
+          fetchRequests();
+        }
+      } catch (err) {
+        console.error('Invalid WS message', err);
+      }
+    };
+    socket.onerror = (err) => console.error('WebSocket error:', err);
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
   // แสดงรายละเอียดคำขอ
   const handleViewDetails = (request: RegistrationRequest) => {
     setSelectedRequest(request);
@@ -353,14 +382,14 @@ export default function AdminPage() {
             color="warning"
             onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'processing')}
           >
-            เปลี่ยนเป็น “กำลังดำเนินการ”
+            เปลี่ยนเป็น "กำลังดำเนินการ"
           </Button>
           <Button
             variant="contained"
             color="error"
             onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'failed')}
           >
-            เปลี่ยนเป็น “ล้มเหลว”
+            เปลี่ยนเป็น "ล้มเหลว"
           </Button>
         </DialogActions>
       </Dialog>
