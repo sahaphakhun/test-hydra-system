@@ -142,18 +142,23 @@ export const checkProxy = async (req: Request, res: Response) => {
       console.error('Proxy check failed: No IP in response');
       return res.status(400).json({ message: 'ไม่สามารถใช้งาน Proxy นี้ได้: ไม่ได้รับข้อมูล IP' });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Proxy check error:', error);
     
     // จัดการข้อผิดพลาดให้ละเอียดมากขึ้น
     let errorMessage = 'ไม่สามารถใช้งาน Proxy นี้ได้';
     
-    if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อถูกปฏิเสธ';
-    } else if (error.code === 'ECONNABORTED') {
-      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อหมดเวลา';
-    } else if (error.code === 'ENOTFOUND') {
-      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: ไม่พบที่อยู่ Host';
+    if (typeof error === 'object' && error !== null) {
+      const errorObj = error as { code?: string; message?: string };
+      if (errorObj.code === 'ECONNREFUSED') {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อถูกปฏิเสธ';
+      } else if (errorObj.code === 'ECONNABORTED') {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อหมดเวลา';
+      } else if (errorObj.code === 'ENOTFOUND') {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: ไม่พบที่อยู่ Host';
+      } else if (errorObj.message) {
+        errorMessage = `ไม่สามารถใช้งาน Proxy นี้ได้: ${errorObj.message}`;
+      }
     }
     
     return res.status(400).json({ message: errorMessage });
