@@ -10,6 +10,7 @@ import {
   Snackbar,
   Backdrop,
   CircularProgress,
+  Button,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import AccountCard from '@/components/ui/AccountCard';
@@ -25,6 +26,8 @@ export default function HomePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [waitingPhoneNumber, setWaitingPhoneNumber] = useState<string | null>(null);
+  const [waitStartTime, setWaitStartTime] = useState<number | null>(null);
+  const [showManualOtp, setShowManualOtp] = useState(false);
 
   // โหลดข้อมูลบัญชีจาก localStorage เมื่อเริ่มต้น
   useEffect(() => {
@@ -92,9 +95,13 @@ export default function HomePage() {
             try { localStorage.setItem('otpWaitingData', JSON.stringify({ phoneNumber: data.phoneNumber, startTime: now })); } catch {}
             setOtpDialog({ phoneNumber: data.phoneNumber, open: true, startTime: now });
             setWaitingPhoneNumber(null);
+            setWaitStartTime(null);
+            setShowManualOtp(false);
           } else if (['success', 'error', 'timeout'].includes(normalizedStatus)) {
             // ล้างข้อมูล waiting และ otpWaitingData เมื่อจบ
             setWaitingPhoneNumber(null);
+            setWaitStartTime(null);
+            setShowManualOtp(false);
             try { localStorage.removeItem('otpWaitingData'); } catch {}
           }
 
@@ -123,6 +130,8 @@ export default function HomePage() {
       });
       
       setWaitingPhoneNumber(data.phoneNumber);
+      setWaitStartTime(Date.now());
+      setShowManualOtp(false);
       
       // สร้างบัญชีใหม่ใน state
       const newAccount: Account = {
@@ -183,6 +192,8 @@ export default function HomePage() {
 
       // แสดง Backdrop ระหว่างรอผลลัพธ์หลังส่ง OTP
       setWaitingPhoneNumber(otpDialog.phoneNumber);
+      setWaitStartTime(Date.now());
+      setShowManualOtp(false);
 
       // ล้าง timestamp ของ OTP เพราะกรอกเสร็จแล้ว
       try { localStorage.removeItem('otpWaitingData'); } catch {}
@@ -194,6 +205,16 @@ export default function HomePage() {
   };
 
   const closeOtpDialog = () => setOtpDialog({ phoneNumber: '', open: false });
+
+  // แสดงปุ่มกรอก OTP เองหลังรอครบ 60 วินาที
+  useEffect(() => {
+    if (!waitingPhoneNumber) {
+      setShowManualOtp(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowManualOtp(true), 60000);
+    return () => clearTimeout(timer);
+  }, [waitingPhoneNumber, waitStartTime]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -284,6 +305,18 @@ export default function HomePage() {
           <Typography variant="h6" mt={2}>
             กำลังรอ OTP สำหรับ {waitingPhoneNumber}
           </Typography>
+          {showManualOtp && (
+            <Button
+              variant="outlined"
+              sx={{ mt: 2, color: '#fff', borderColor: '#fff' }}
+              onClick={() => {
+                const account = accounts.find((a) => a.phoneNumber === waitingPhoneNumber);
+                if (account) handleOpenOtp(account);
+              }}
+            >
+              กรอก OTP เอง
+            </Button>
+          )}
         </Box>
       </Backdrop>
 
