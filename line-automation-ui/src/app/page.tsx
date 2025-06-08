@@ -80,7 +80,9 @@ export default function HomePage() {
         if (data.type === 'statusUpdate' && data.phoneNumber) {
           // บางกรณี backend อาจส่งสถานะในรูปแบบอื่น ๆ เช่น otpWait, otp_wait
           const rawStatus: string = data.status;
-          rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
+          // แปลงสถานะให้เป็นรูปแบบที่ UI รองรับ
+          const normalizedStatus: Account['status'] =
+            rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
               ? 'awaiting_otp'
               : rawStatus === 'success'
               ? 'completed'
@@ -89,7 +91,11 @@ export default function HomePage() {
               : (rawStatus as Account['status']);
 
           // อัปเดตสถานะใน state
-          setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc));
+          setAccounts((prev) =>
+            prev.map((acc) =>
+              acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc
+            )
+          );
 
           if (normalizedStatus === 'awaiting_otp') {
             const now = Date.now();
