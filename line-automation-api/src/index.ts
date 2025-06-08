@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { registerRoutes } from './routes';
 import { setupWebSocketHandlers } from './websocket';
+import adminRoutes from './routes/adminRoutes';
 
 // โหลดค่าจาก .env
 dotenv.config();
@@ -37,6 +38,7 @@ mongoose.connect(MONGO_URL)
 
 // ลงทะเบียน routes
 registerRoutes(app);
+app.use('/', adminRoutes);
 
 // ตั้งค่า WebSocket
 const wss = new WebSocketServer({ server });
