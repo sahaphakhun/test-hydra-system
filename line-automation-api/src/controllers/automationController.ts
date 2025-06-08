@@ -118,17 +118,33 @@ export const submitOtp = async (req: Request, res: Response) => {
     await requestEntry.save();
     setTimeout(async () => {
       try {
-        requestEntry.status = 'completed';
-        requestEntry.completedAt = new Date();
-        await requestEntry.save();
+        // ตรวจสอบว่ามีบัญชีอยู่แล้วหรือไม่
+        const existingAccount = await LineAccount.findOne({ phoneNumber: requestEntry.phoneNumber });
+        if (!existingAccount) {
+          // สร้างบัญชีใหม่ใน LineAccount
+          const newAccount = new LineAccount({
+            displayName: requestEntry.displayName,
+            userId: `user_${requestEntry.phoneNumber}_${Date.now()}`, // สร้าง userId ชั่วคราว
+            phoneNumber: requestEntry.phoneNumber,
+            email: `${requestEntry.phoneNumber}@temp.com`, // email ชั่วคราว
+            lineConfigId: '000000000000000000000000', // ObjectId ชั่วคราว
+          });
+          await newAccount.save();
+          console.log(`✅ Created LineAccount for ${requestEntry.phoneNumber}`);
+        }
+        
+        // ลบ RegistrationRequest
+        await RegistrationRequest.findByIdAndDelete(requestEntry._id);
+        console.log(`✅ Deleted RegistrationRequest for ${requestEntry.phoneNumber}`);
       } catch (err) {
-        console.error('Failed to update registration request status:', err);
+        console.error('Failed to create account and delete request:', err);
       }
+      
       sendStatusUpdate(
         phoneNumber,
         AutomationStatus.SUCCESS,
-        'ข้อมูลของคุณถูกส่งไปยังทีมงานเรียบร้อยแล้ว เรากำลังดำเนินการสมัครบัญชีให้คุณ',
-        { requestId: requestEntry._id }
+        'สมัครบัญชี LINE สำเร็จแล้ว! บัญชีของคุณพร้อมใช้งาน',
+        { requestId: requestEntry._id, accountCreated: true }
       );
     }, 3000);
     return res.status(200).json({ phoneNumber, message: 'ได้รับรหัส OTP เรียบร้อยแล้ว ทีมงานกำลังดำเนินการสมัครบัญชีให้คุณ' });
