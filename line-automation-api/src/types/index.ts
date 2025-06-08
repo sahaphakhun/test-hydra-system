@@ -1,7 +1,7 @@
 // ประเภทของสถานะการทำงานของระบบ Automation
 export enum AutomationStatus {
   IDLE = 'idle',
-  WAITING_OTP = 'waitingOtp',
+  AWAITING_OTP = 'awaitingOtp',
   PROCESSING = 'processing',
   SUCCESS = 'success',
   ERROR = 'error',
@@ -44,6 +44,7 @@ export interface StatusNotification {
   type: string;
   status: AutomationStatus;
   message: string;
+  phoneNumber?: string;
   details?: any;
 }
 
@@ -57,6 +58,7 @@ export interface RegisterRequest {
 
 // ประเภทข้อมูลคำขอส่ง OTP
 export interface OtpRequest {
+  phoneNumber: string;
   otp: string;
 }
 

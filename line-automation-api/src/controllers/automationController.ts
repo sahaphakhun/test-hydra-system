@@ -38,14 +38,14 @@ export const registerLine = async (req: Request, res: Response) => {
 
     // จำลองการเริ่มกระบวนการลงทะเบียน
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner
-    sendStatusUpdate(AutomationStatus.PROCESSING, 'กำลังเริ่มกระบวนการลงทะเบียน...');
+    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังเริ่มกระบวนการลงทะเบียน...');
     
     // หน่วงเวลาเพื่อจำลองการทำงาน
     setTimeout(() => {
       sendStatusUpdate(
-        AutomationStatus.WAITING_OTP,
-        'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS',
-        { phoneNumber }
+        phoneNumber,
+        AutomationStatus.AWAITING_OTP,
+        'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS'
       );
     }, 2000);
 
@@ -60,7 +60,7 @@ export const registerLine = async (req: Request, res: Response) => {
 export const submitOtp = async (req: Request, res: Response) => {
   console.log('▶️ submitOtp called, body:', req.body);
   try {
-    const { otp }: OtpRequest = req.body;
+    const { phoneNumber, otp }: OtpRequest = req.body;
     
     if (!otp) {
       return res.status(400).json({ message: 'กรุณากรอกรหัส OTP' });
@@ -70,28 +70,29 @@ export const submitOtp = async (req: Request, res: Response) => {
     currentOtp = otp;
     
     // จำลองกระบวนการตรวจสอบ OTP
-    sendStatusUpdate(AutomationStatus.PROCESSING, 'กำลังตรวจสอบรหัส OTP...');
+    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังตรวจสอบรหัส OTP...');
     
     // หน่วงเวลาเพื่อจำลองการทำงาน
     setTimeout(() => {
-      // สร้างบัญชีใหม่ (ในสถานการณ์จริงจะมีการตรวจสอบกับ LINE ก่อน)
+      // สร้างบัญชีใหม่ (ในสถานการณ์จริงจะมีการตรวจสอบกับ LINE ก่อน และใช้ข้อมูลจริง)
       const newAccount = new LineAccount({
-        phoneNumber: '0812345678', // ควรได้จากสถานะการลงทะเบียนจริง
-        displayName: 'LINE User', // ควรได้จากสถานะการลงทะเบียนจริง
-        password: 'password123', // ควรได้จากสถานะการลงทะเบียนจริง
+        phoneNumber,
+        displayName: 'LINE User', // ในกรณีจริงควรได้จากผลลัพธ์ Automation
+        password: 'password123', // เช่นเดียวกันควรใช้รหัสจริงที่สร้างไว้
         status: 'active',
       });
       
       newAccount.save();
       
       sendStatusUpdate(
+        newAccount.phoneNumber,
         AutomationStatus.SUCCESS,
         'ลงทะเบียนสำเร็จ',
         { accountId: newAccount._id }
       );
     }, 2000);
     
-    return res.status(200).json({ message: 'OTP received and saved.' });
+    return res.status(200).json({ phoneNumber, message: 'OTP received and saved.' });
   } catch (error) {
     console.error('Error in submitOtp:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกรหัส OTP' });
@@ -108,7 +109,8 @@ export const receiveStatus = (req: Request, res: Response) => {
       return res.status(400).json({ message: 'กรุณาระบุสถานะ' });
     }
     
-    sendStatusUpdate(status, message, details);
+    const phoneNumber: string | undefined = (details && details.phoneNumber) || undefined;
+    sendStatusUpdate(phoneNumber, status, message, details);
     
     return res.status(200).json({ message: 'Status received.' });
   } catch (error) {
@@ -130,14 +132,15 @@ export const logout = (req: Request, res: Response) => {
 };
 
 // ฟังก์ชันสำหรับส่งข้อมูลสถานะผ่าน WebSocket
-const sendStatusUpdate = (status: string, message: string, details?: any) => {
-  console.log(`🔔 Sending statusUpdate: status=${status}, message=${message}, details=`, details);
+const sendStatusUpdate = (phoneNumber: string | undefined, status: string, message: string, details?: any) => {
+  console.log(`🔔 Sending statusUpdate: phoneNumber=${phoneNumber}, status=${status}, message=${message}, details=`, details);
   if (wss) {
     console.log(`🔔 WebSocket clients count: ${wss.clients.size}`);
     wss.clients.forEach((client: WebSocket) => {
       if (client.readyState === WebSocket.OPEN) {
         const payload = JSON.stringify({
           type: 'statusUpdate',
+          phoneNumber,
           status,
           message,
           details,

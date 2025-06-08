@@ -76,7 +76,12 @@ export default function HomePage() {
         if (data.type === 'statusUpdate' && data.phoneNumber) {
           // บางกรณี backend อาจส่งสถานะในรูปแบบอื่น ๆ เช่น otpWait, otp_wait
           const rawStatus: string = data.status;
-          const normalizedStatus = (rawStatus === 'otpWait' || rawStatus === 'otp_wait') ? 'awaitingOtp' : (rawStatus as Account['status']);
+          const normalizedStatus =
+            rawStatus === 'processing'
+              ? 'pending'
+              : rawStatus === 'otpWait' || rawStatus === 'otp_wait'
+              ? 'awaitingOtp'
+              : (rawStatus as Account['status']);
 
           // อัปเดตสถานะใน state
           setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc));
