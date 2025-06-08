@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { LineAccount, ILineAccount } from '../models/lineAccount';
+import { LineAccount, ILineAccount } from '../models/LineAccount';
 import mongoose from 'mongoose';
 
 const router = express.Router();
