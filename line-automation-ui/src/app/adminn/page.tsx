@@ -5,9 +5,6 @@ import {
   Container,
   Typography,
   Box,
-  Card,
-  CardContent,
-  CardActions,
   Button,
   Chip,
   Dialog,
@@ -26,14 +23,12 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Grid2 as Grid,
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import {
   Visibility,
-  Edit,
   Delete,
   CheckCircle,
-  Cancel,
   Refresh,
 } from '@mui/icons-material';
 import api from '@/lib/api';
