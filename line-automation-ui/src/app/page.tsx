@@ -127,6 +127,7 @@ export default function HomePage() {
         displayName: data.name,
         password: data.password,
         proxy: data.proxy,
+        autoLogout: data.autoLogout,
       });
       
       setWaitingPhoneNumber(data.phoneNumber);

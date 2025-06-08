@@ -13,6 +13,8 @@ import {
   Box,
   CircularProgress,
   Alert,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { Close, CheckCircle, Error } from '@mui/icons-material';
 import { useState } from 'react';
@@ -31,6 +33,7 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
     phoneNumber: '',
     password: '',
     proxy: '',
+    autoLogout: true,
   });
   const [loading, setLoading] = useState(false);
   const [proxyStatus, setProxyStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
@@ -117,7 +120,7 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
         ...formData,
         proxy: formData.proxy?.trim() || undefined,
       });
-      setFormData({ name: '', phoneNumber: '', password: '', proxy: '' });
+      setFormData({ name: '', phoneNumber: '', password: '', proxy: '', autoLogout: true });
       setProxyStatus('idle');
       onClose();
     } catch (error) {
@@ -129,7 +132,7 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({ name: '', phoneNumber: '', password: '', proxy: '' });
+      setFormData({ name: '', phoneNumber: '', password: '', proxy: '', autoLogout: true });
       setProxyStatus('idle');
       onClose();
     }
@@ -220,6 +223,19 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
               )}
             </Box>
           </Box>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.autoLogout}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, autoLogout: e.target.checked }))
+                }
+                disabled={loading}
+                color="primary"
+              />
+            }
+            label="Logout อัตโนมัติหลังกระบวนการ"
+          />
         </Stack>
       </DialogContent>
 

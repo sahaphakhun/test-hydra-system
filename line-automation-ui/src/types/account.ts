@@ -14,4 +14,5 @@ export interface CreateAccountData {
   phoneNumber: string;
   password: string;
   proxy?: string;
+  autoLogout?: boolean;
 } 
