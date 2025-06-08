@@ -100,15 +100,22 @@ export default function AdminPage() {
 
   // websocket real-time
   useEffect(() => {
-    const unsubscribe = addMessageListener((data) => {
-      if (
-        data.type === "STATUS_UPDATE" ||
-        (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId))
-      ) {
-        fetchRequests();
-      }
-    });
-    return unsubscribe;
+    try {
+      const unsubscribe = addMessageListener((data) => {
+        if (
+          data.type === "STATUS_UPDATE" ||
+          (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId))
+        ) {
+          fetchRequests();
+        }
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Failed to setup WebSocket listener:', error);
+      // ถ้า WebSocket ไม่ทำงาน ให้ใช้ polling แทน
+      const interval = setInterval(fetchRequests, 30000); // refresh ทุก 30 วินาที
+      return () => clearInterval(interval);
+    }
   }, [addMessageListener]);
 
   // ฟิลเตอร์/ค้นหา

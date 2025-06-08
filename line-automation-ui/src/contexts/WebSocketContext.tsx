@@ -18,6 +18,7 @@ interface IWebSocketContext {
 const WebSocketContext = createContext<IWebSocketContext>({
   send: () => {},
   isConnected: false,
+  addMessageListener: () => () => {},
 });
 
 const RAW_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL;
@@ -36,31 +37,55 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const socket = new WebSocket(WS_ENDPOINT);
-    socketRef.current = socket;
+    try {
+      const socket = new WebSocket(WS_ENDPOINT);
+      socketRef.current = socket;
 
-    socket.onopen = () => setIsConnected(true);
-    socket.onclose = () => setIsConnected(false);
+      socket.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
+      };
+      
+      socket.onclose = () => {
+        console.log('WebSocket disconnected');
+        setIsConnected(false);
+      };
 
-    socket.onerror = console.error;
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        listenersRef.current.forEach((cb) => cb(data));
-      } catch (err) {
-        console.error('Invalid WS message', err);
-      }
-    };
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          listenersRef.current.forEach((cb) => {
+            try {
+              cb(data);
+            } catch (err) {
+              console.error('Error in message listener:', err);
+            }
+          });
+        } catch (err) {
+          console.error('Invalid WS message', err);
+        }
+      };
 
-    return () => {
-      socket.close();
-    };
+      return () => {
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close();
+        }
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+    }
   }, []);
 
   const send = useCallback<IWebSocketContext['send']>((data) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(data);
+    } else {
+      console.warn('WebSocket is not connected, cannot send message');
     }
   }, []);
 
@@ -83,4 +108,10 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useWebSocket = () => useContext(WebSocketContext); 
+export const useWebSocket = () => {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocket must be used within a WebSocketProvider');
+  }
+  return context;
+}; 
