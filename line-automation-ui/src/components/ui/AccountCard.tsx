@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, Typography, Chip, Box, IconButton, Menu, MenuItem } from '@mui/material';
+import { Card, CardContent, Typography, Chip, Box, IconButton, Menu, MenuItem, Button } from '@mui/material';
 import { MoreVert, Circle } from '@mui/icons-material';
 import { useState } from 'react';
 import { Account } from '@/types/account';
@@ -9,9 +9,13 @@ interface AccountCardProps {
   account: Account;
   onEdit?: (account: Account) => void;
   onDelete?: (accountId: string) => void;
+  /**
+   * เปิด dialog เพื่อกรอก OTP สำหรับบัญชีนี้
+   */
+  onEnterOtp?: (account: Account) => void;
 }
 
-export default function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onEnterOtp }: AccountCardProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -91,6 +95,17 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
         <Typography variant="caption" display="block" color="text.secondary" mt={1}>
           สร้างเมื่อ: {new Date(account.createdAt).toLocaleDateString('th-TH')}
         </Typography>
+
+        {/* ปุ่มสำหรับกรอก OTP */}
+        <Box mt={2}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => onEnterOtp?.(account)}
+          >
+            กรอก OTP
+          </Button>
+        </Box>
       </CardContent>
 
       <Menu

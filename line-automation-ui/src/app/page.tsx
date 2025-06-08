@@ -156,6 +156,15 @@ export default function HomePage() {
     setMessageType('success');
   };
 
+  /**
+   * เปิด dialog เพื่อกรอก OTP สำหรับเบอร์โทรศัพท์ที่ระบุ
+   */
+  const handleOpenOtp = (account: Account) => {
+    setOtpDialog({ phoneNumber: account.phoneNumber, open: true });
+    // เมื่อเปิด dialog ด้วยตนเอง เราไม่ต้องการ backdrop waiting
+    setWaitingPhoneNumber(null);
+  };
+
   const handleSubmitOtp = async (otp: string) => {
     try {
       await api.post('/automation/submit-otp', {
@@ -225,6 +234,7 @@ export default function HomePage() {
               account={account}
               onEdit={handleEditAccount}
               onDelete={handleDeleteAccount}
+              onEnterOtp={handleOpenOtp}
             />
           ))}
         </Box>
