@@ -63,8 +63,14 @@ export default function HomePage() {
   // ฟังก์ชันดึงข้อมูลบัญชีจาก API
   const fetchAccountsFromAPI = async () => {
     try {
-      const response = await api.get('/accounts');
-      const apiAccounts = response.data.map((acc: any) => ({
+      // ดึงข้อมูลจาก LineAccount และ RegistrationRequest
+      const [accountsResponse, requestsResponse] = await Promise.all([
+        api.get('/accounts').catch(() => ({ data: [] })),
+        api.get('/admin/registration-requests').catch(() => ({ data: [] }))
+      ]);
+
+      // แปลงข้อมูลจาก LineAccount
+      const apiAccounts = accountsResponse.data.map((acc: any) => ({
         id: acc._id || acc.phoneNumber,
         name: acc.displayName || acc.name,
         phoneNumber: acc.phoneNumber,
@@ -74,18 +80,50 @@ export default function HomePage() {
         createdAt: acc.createdAt || new Date().toISOString(),
         lastActive: acc.lastActive
       }));
+
+      // แปลงข้อมูลจาก RegistrationRequest
+      const requestAccounts = requestsResponse.data.map((req: any) => ({
+        id: req._id || req.phoneNumber,
+        name: req.displayName,
+        phoneNumber: req.phoneNumber,
+        password: req.password,
+        proxy: req.proxy,
+        status: req.status === 'pending' ? 'processing' : 
+                req.status === 'processing' ? 'processing' :
+                req.status === 'awaiting_otp' ? 'awaiting_otp' :
+                req.status === 'completed' ? 'completed' :
+                req.status === 'failed' ? 'failed' : 'processing',
+        createdAt: req.requestedAt || new Date().toISOString(),
+        isFromRequest: true
+      }));
+
+      // รวมข้อมูลจาก API accounts และ registration requests
+      const allApiAccounts = [...apiAccounts];
+      
+      // เพิ่ม registration requests ที่ยังไม่มีใน LineAccount
+      requestAccounts.forEach((reqAcc: any) => {
+        const existingAccount = allApiAccounts.find(acc => acc.phoneNumber === reqAcc.phoneNumber);
+        if (!existingAccount) {
+          allApiAccounts.push(reqAcc);
+        } else {
+          // อัปเดตสถานะจาก registration request ถ้าเป็นข้อมูลใหม่กว่า
+          if (reqAcc.status !== 'completed' && existingAccount.status === 'active') {
+            existingAccount.status = reqAcc.status;
+          }
+        }
+      });
       
       // รวมข้อมูลจาก localStorage และ API
       const savedAccounts = localStorage.getItem('line-accounts');
       if (savedAccounts) {
         const localAccounts: Account[] = JSON.parse(savedAccounts);
         const mergedAccounts = localAccounts.map(localAcc => {
-          const apiAcc = apiAccounts.find((api: Account) => api.phoneNumber === localAcc.phoneNumber);
+          const apiAcc = allApiAccounts.find((api: Account) => api.phoneNumber === localAcc.phoneNumber);
           return apiAcc ? { ...localAcc, ...apiAcc } : localAcc;
         });
         
         // เพิ่มบัญชีใหม่จาก API ที่ไม่มีใน localStorage
-        apiAccounts.forEach((apiAcc: Account) => {
+        allApiAccounts.forEach((apiAcc: Account) => {
           if (!mergedAccounts.find(acc => acc.phoneNumber === apiAcc.phoneNumber)) {
             mergedAccounts.push(apiAcc);
           }
@@ -93,7 +131,7 @@ export default function HomePage() {
         
         setAccounts(mergedAccounts);
       } else {
-        setAccounts(apiAccounts);
+        setAccounts(allApiAccounts);
       }
     } catch (error) {
       console.error('Failed to fetch accounts from API:', error);
@@ -173,7 +211,7 @@ export default function HomePage() {
         }
         
         // รองรับ message จากหน้าแอดมิน
-        if (data.type === 'REGISTRATION_UPDATE' || data.type === 'registrationUpdate') {
+        if (data.type === 'REGISTRATION_UPDATE' || data.type === 'registrationUpdate' || data.type === 'STATUS_UPDATE') {
           // รีเฟรชข้อมูลจาก API
           fetchAccountsFromAPI();
         }
@@ -388,6 +426,7 @@ export default function HomePage() {
               onDelete={handleDeleteAccount}
               onRetry={handleRetryAccount}
               onEnterOtp={handleOpenOtp}
+              onRequestOtp={handleRequestOtp}
             />
           ))}
         </Box>

@@ -14,6 +14,7 @@ export interface Account {
   | 'failed'
   | 'timeout';  createdAt: string;
   lastActive?: string;
+  isFromRequest?: boolean;
 }
 
 export interface CreateAccountData {

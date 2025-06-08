@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, CardContent, Typography, Chip, Box, IconButton, Menu, MenuItem, Button } from '@mui/material';
-import { MoreVert, Circle } from '@mui/icons-material';
+import { Card, CardContent, Typography, Chip, Box, IconButton, Menu, MenuItem, Button, Divider } from '@mui/material';
+import { MoreVert, Circle, Edit, Delete, Refresh, Sms, PhoneAndroid } from '@mui/icons-material';
 import { useState } from 'react';
 import { Account } from '@/types/account';
 
@@ -14,12 +14,16 @@ interface AccountCardProps {
    */
   onEnterOtp?: (account: Account) => void;
   /**
+   * ขอ OTP สำหรับบัญชีนี้
+   */
+  onRequestOtp?: (phoneNumber: string) => void;
+  /**
    * ลองสมัครใหม่เมื่อเกิดข้อผิดพลาดหรือหมดเวลา OTP
    */
   onRetry?: (account: Account) => void;
 }
 
-export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRequestOtp, onRetry }: AccountCardProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -79,6 +83,15 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onR
 
         <Typography variant="body2" color="text.secondary" mb={1}>
           {account.phoneNumber}
+          {account.isFromRequest && (
+            <Chip 
+              label="รอดำเนินการ" 
+              size="small" 
+              variant="outlined" 
+              color="info"
+              sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
+            />
+          )}
         </Typography>
 
         <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -121,13 +134,26 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onR
         onClose={handleMenuClose}
       >
         <MenuItem onClick={() => { onEdit?.(account); handleMenuClose(); }}>
+          <Edit sx={{ mr: 1, fontSize: 20 }} />
           แก้ไข
         </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => { onRequestOtp?.(account.phoneNumber); handleMenuClose(); }}>
+          <PhoneAndroid sx={{ mr: 1, fontSize: 20 }} />
+          ขอ OTP
+        </MenuItem>
+        <MenuItem onClick={() => { onEnterOtp?.(account); handleMenuClose(); }}>
+          <Sms sx={{ mr: 1, fontSize: 20 }} />
+          กรอก OTP
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={() => { onDelete?.(account.id); handleMenuClose(); }} sx={{ color: 'error.main' }}>
+          <Delete sx={{ mr: 1, fontSize: 20 }} />
           ลบ
         </MenuItem>
-        {(account.status === 'error' || account.status === 'timeout') && (
+        {(account.status === 'failed' || account.status === 'timeout') && (
           <MenuItem onClick={() => { onRetry?.(account); handleMenuClose(); }}>
+            <Refresh sx={{ mr: 1, fontSize: 20 }} />
             ลองสมัครใหม่
           </MenuItem>
         )}
