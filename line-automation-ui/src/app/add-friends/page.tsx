@@ -104,7 +104,7 @@ export default function AddFriendsPage() {
   const fetchJobs = async () => {
     setJobsLoading(true);
     try {
-      const res = await api.get('/jobs?type=add_friends');
+      const res = await api.get('/admin/jobs?type=add_friends');
       setJobs(res.data);
     } catch (err) {
       console.error(err);

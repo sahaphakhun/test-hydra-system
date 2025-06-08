@@ -100,7 +100,7 @@ export default function SendMessagePage() {
   const fetchJobs = async () => {
     setJobsLoading(true);
     try {
-      const res = await api.get('/jobs?type=send_message');
+      const res = await api.get('/admin/jobs?type=send_message');
       setJobs(res.data);
     } catch (err) {
       console.error(err);

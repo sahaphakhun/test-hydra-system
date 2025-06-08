@@ -9,7 +9,6 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const http_1 = require("http");
 const ws_1 = require("ws");
-const routes_1 = require("./routes");
 const websocket_1 = require("./websocket");
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const automationRoutes_1 = __importDefault(require("./routes/automationRoutes"));
@@ -37,10 +36,13 @@ mongoose_1.default.connect(MONGO_URL)
     process.exit(1);
 });
 // ลงทะเบียน routes
-(0, routes_1.registerRoutes)(app);
 app.use('/', adminRoutes_1.default);
 app.use('/', automationRoutes_1.default);
 app.use('/', accountRoutes_1.default);
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 // ตั้งค่า WebSocket
 const wss = new ws_1.WebSocketServer({ server });
 (0, websocket_1.setupWebSocketHandlers)(wss);

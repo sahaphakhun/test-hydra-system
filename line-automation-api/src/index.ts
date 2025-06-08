@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { registerRoutes } from './routes';
 import { setupWebSocketHandlers } from './websocket';
 import adminRoutes from './routes/adminRoutes';
 import automationRoutes from './routes/automationRoutes';
@@ -39,10 +38,14 @@ mongoose.connect(MONGO_URL)
   });
 
 // ลงทะเบียน routes
-registerRoutes(app);
 app.use('/', adminRoutes);
 app.use('/', automationRoutes);
 app.use('/', accountRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
 // ตั้งค่า WebSocket
 const wss = new WebSocketServer({ server });

@@ -144,7 +144,7 @@ export default function AdminPage() {
   const fetchJobs = async () => {
     setJobsLoading(true);
     try {
-      const res = await api.get("/jobs");
+      const res = await api.get("/admin/jobs");
       setJobs(res.data);
     } catch {
       setMessage("โหลดข้อมูลงานล้มเหลว");
@@ -298,6 +298,30 @@ export default function AdminPage() {
       default:
         return status;
     }
+  };
+
+  // อัปเดตสถานะงาน
+  const handleUpdateJobStatus = async () => {
+    if (!selectedJob) return;
+    try {
+      await api.put(`/admin/jobs/${selectedJob._id}/status`, {
+        status: editJobStatus,
+      });
+      setMessage("อัปเดตสถานะงานสำเร็จ");
+      setMessageType("success");
+      setJobDetailOpen(false);
+      fetchAllData();
+    } catch {
+      setMessage("อัปเดตสถานะงานล้มเหลว");
+      setMessageType("error");
+    }
+  };
+
+  // เปิด dialog รายละเอียดงาน
+  const handleOpenJobDetail = (job: Job) => {
+    setSelectedJob(job);
+    setEditJobStatus(job.status);
+    setJobDetailOpen(true);
   };
 
   return (
@@ -527,29 +551,46 @@ export default function AdminPage() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>ชื่องาน</TableCell>
+                <TableCell>ประเภทงาน</TableCell>
+                <TableCell>บัญชี</TableCell>
                 <TableCell>สถานะ</TableCell>
                 <TableCell>วันที่สร้าง</TableCell>
-                <TableCell>การโต้ตอบล่าสุด</TableCell>
+                <TableCell>วันที่อัปเดต</TableCell>
+                <TableCell align="center">การจัดการ</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {jobsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={6} align="center">
                     <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
               ) : jobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={6} align="center">
                     ไม่พบงาน
                   </TableCell>
                 </TableRow>
               ) : (
                 jobs.map((job) => (
                   <TableRow key={job._id} hover>
-                    <TableCell>{job.type}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={job.type === 'add_friends' ? 'เพิ่มเพื่อน' : 
+                              job.type === 'create_group' ? 'สร้างกลุ่ม' : 
+                              job.type === 'send_message' ? 'ส่งข้อความ' : job.type}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {job.accountId ? (
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                          {job.accountId.slice(-8)}...
+                        </Typography>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={getStatusText(job.status)}
@@ -562,6 +603,13 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell>
                       {new Date(job.updatedAt).toLocaleDateString('th-TH')}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="แก้ไขสถานะ">
+                        <IconButton onClick={() => handleOpenJobDetail(job)}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))
@@ -653,6 +701,92 @@ export default function AdminPage() {
             disabled={createAccountLoading}
           >
             {createAccountLoading ? <CircularProgress size={20} /> : "สร้างบัญชี"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog รายละเอียดงาน */}
+      <Dialog open={jobDetailOpen} onClose={() => setJobDetailOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>รายละเอียดงาน</DialogTitle>
+        <DialogContent dividers>
+          {selectedJob && (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="subtitle2">ประเภทงาน</Typography>
+                <Chip
+                  label={selectedJob.type === 'add_friends' ? 'เพิ่มเพื่อน' : 
+                        selectedJob.type === 'create_group' ? 'สร้างกลุ่ม' : 
+                        selectedJob.type === 'send_message' ? 'ส่งข้อความ' : selectedJob.type}
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">บัญชี ID</Typography>
+                <Typography sx={{ fontFamily: 'monospace' }}>
+                  {selectedJob.accountId || 'ไม่ระบุ'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">ข้อมูลงาน</Typography>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                  <pre style={{ margin: 0, fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+                    {JSON.stringify(selectedJob.data, null, 2)}
+                  </pre>
+                </Paper>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">สถานะปัจจุบัน</Typography>
+                <Chip
+                  label={getStatusText(selectedJob.status)}
+                  color={getStatusColor(selectedJob.status) as ChipProps["color"]}
+                  size="small"
+                />
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">เปลี่ยนสถานะ</Typography>
+                <Select
+                  value={editJobStatus}
+                  onChange={(e) => setEditJobStatus(e.target.value as Job["status"])}
+                  fullWidth
+                >
+                  <MenuItem value="pending">รอดำเนินการ</MenuItem>
+                  <MenuItem value="in_progress">กำลังดำเนินการ</MenuItem>
+                  <MenuItem value="completed">เสร็จสมบูรณ์</MenuItem>
+                  <MenuItem value="failed">ล้มเหลว</MenuItem>
+                </Select>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">บันทึกการทำงาน</Typography>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 200, overflow: 'auto' }}>
+                  {selectedJob.logs.length > 0 ? (
+                    selectedJob.logs.map((log, index) => (
+                      <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                        {log}
+                      </Typography>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      ไม่มีบันทึก
+                    </Typography>
+                  )}
+                </Paper>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">วันที่สร้าง</Typography>
+                <Typography>{new Date(selectedJob.createdAt).toLocaleString('th-TH')}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">วันที่อัปเดตล่าสุด</Typography>
+                <Typography>{new Date(selectedJob.updatedAt).toLocaleString('th-TH')}</Typography>
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setJobDetailOpen(false)}>ปิด</Button>
+          <Button onClick={handleUpdateJobStatus} variant="contained" color="primary">
+            อัปเดตสถานะงาน
           </Button>
         </DialogActions>
       </Dialog>
