@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
-import { LineAccount, ILineAccount } from '../models/lineAccount';
+import { LineAccount, ILineAccount } from '../models/LineAccount';
+
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -7,7 +8,7 @@ const router = express.Router();
 // รับบัญชี LINE ทั้งหมด
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { lineConfigId, tag, limit = 10, page = 1 }: { lineConfigId?: string; tag?: string; limit?: string | number; page?: string | number } = req.query;
+    const { lineConfigId, tag, limit = 10, page = 1 } = req.query;
     
     // สร้างตัวกรอง
     const filter: any = {};
@@ -223,7 +224,7 @@ router.delete('/:id/tags', async (req: Request, res: Response) => {
     }
     
     // ลบแท็กที่ระบุ
-    lineAccount.tags = lineAccount.tags.filter(tag => !tags.includes(tag));
+    lineAccount.tags = lineAccount.tags.filter((tag: string) => !tags.includes(tag));
     
     await lineAccount.save();
     
