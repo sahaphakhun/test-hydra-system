@@ -39,14 +39,11 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
         // รีเซ็ตข้อความแสดงข้อผิดพลาด
         setProxyErrorMessage('');
         
-        // ตรวจสอบรูปแบบเบื้องต้น
+        // ตรวจสอบรูปแบบเบื้องต้น (เติม http:// หากผู้ใช้ไม่ใส่)
+        const rawProxy = formData.proxy.trim();
+        const testUrl = rawProxy.startsWith('http://') || rawProxy.startsWith('https://') ? rawProxy : `http://${rawProxy}`;
         try {
-            const url = new URL(formData.proxy);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                setProxyStatus('invalid');
-                setProxyErrorMessage('โปรโตคอลต้องเป็น http หรือ https เท่านั้น');
-                return;
-            }
+            new URL(testUrl);
         } catch (error) {
             setProxyStatus('invalid');
             setProxyErrorMessage('รูปแบบ Proxy ไม่ถูกต้อง');
