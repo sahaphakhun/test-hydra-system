@@ -10,4 +10,8 @@ router.put('/admin/registration-requests/:id/status', adminController.updateRegi
 router.post('/admin/registration-requests/:id/create-account', adminController.createAccountFromRequest);
 router.delete('/admin/registration-requests/:id', adminController.deleteRegistrationRequest);
 
-export default router; 
+// จัดการงาน (Jobs)
+router.get('/admin/jobs', adminController.getAllJobs);
+router.put('/admin/jobs/:id/status', adminController.updateJobStatus);
+
+export default router;

@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { LineAccount } from '../models/LineAccount';
 import LineGroup from '../models/LineGroup';
 import PhoneNumberList from '../models/PhoneNumberList';
+import Job from '../models/Job';
+import { broadcastMessage } from '../websocket';
+
+const createJob = async (type: string, accountId: string | undefined, data: any) => {
+  const job = new Job({ type, accountId, data });
+  await job.save();
+  broadcastMessage('STATUS_UPDATE', { jobId: job._id, status: job.status });
+  return job;
+};
+
+const updateJobStatus = async (job: any, status: string, log?: string) => {
+  job.status = status as any;
+  if (log) job.logs.push(log);
+  await job.save();
+  broadcastMessage('STATUS_UPDATE', { jobId: job._id, status });
+};
 
 export const getAllAccounts = async (req: Request, res: Response) => {
   try {
@@ -44,8 +60,10 @@ export const addFriends = async (req: Request, res: Response) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
+    const job = await createJob('add_friends', undefined, { ids });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้เพิ่มเพื่อน
-    return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${ids.length} รายการ`, addedCount: ids.length });
+    await updateJobStatus(job, 'completed');
+    return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${ids.length} รายการ`, addedCount: ids.length, jobId: job._id });
   } catch (error) {
     console.error('Error in addFriends:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการเพิ่มเพื่อน' });
@@ -58,9 +76,11 @@ export const createGroup = async (req: Request, res: Response) => {
     if (!name) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
+    const job = await createJob('create_group', undefined, { name });
     const newGroup = new LineGroup({ name, accountId: '', memberCount: 0 });
     await newGroup.save();
-    return res.status(201).json({ message: 'สร้างกลุ่มสำเร็จ', group: newGroup });
+    await updateJobStatus(job, 'completed');
+    return res.status(201).json({ message: 'สร้างกลุ่มสำเร็จ', group: newGroup, jobId: job._id });
   } catch (error) {
     console.error('Error in createGroup:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างกลุ่ม' });
@@ -73,8 +93,10 @@ export const sendMessageToGroup = async (req: Request, res: Response) => {
     if (!message) {
       return res.status(400).json({ message: 'กรุณาระบุข้อความ' });
     }
+    const job = await createJob('send_message', undefined, { message });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้ส่งข้อความ
-    return res.status(200).json({ message: 'ส่งข้อความสำเร็จ', sent: true });
+    await updateJobStatus(job, 'completed');
+    return res.status(200).json({ message: 'ส่งข้อความสำเร็จ', sent: true, jobId: job._id });
   } catch (error) {
     console.error('Error in sendMessageToGroup:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการส่งข้อความ' });

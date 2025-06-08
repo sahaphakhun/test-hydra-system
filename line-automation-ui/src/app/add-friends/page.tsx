@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Typography, TextField, Button, Stack, Snackbar, Alert } from '@mui/material';
 import api from '@/lib/api';
 
@@ -8,6 +8,24 @@ export default function AddFriendsPage() {
   const [userIds, setUserIds] = useState(''); // comma separated
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | boolean>(false);
+  const [jobId, setJobId] = useState<string>('');
+  const [jobStatus, setJobStatus] = useState<string>('');
+
+  useEffect(() => {
+    if (!jobId) return;
+    const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!rawWsUrl) return;
+    const ws = new WebSocket(rawWsUrl.replace(/^http/, 'ws'));
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'STATUS_UPDATE' && data.payload?.jobId === jobId) {
+          setJobStatus(data.payload.status);
+        }
+      } catch {}
+    };
+    return () => ws.close();
+  }, [jobId]);
 
   const handleSubmit = async () => {
     const ids = userIds
@@ -18,9 +36,10 @@ export default function AddFriendsPage() {
 
     setLoading(true);
     try {
-      await api.post('/add-friends', { ids });
+      const res = await api.post('/add-friends', { ids });
       setMessage('เพิ่มเพื่อนสำเร็จ');
       setUserIds('');
+      if (res.data.jobId) setJobId(res.data.jobId);
     } catch {
       setMessage('เกิดข้อผิดพลาด');
     } finally {
@@ -44,6 +63,9 @@ export default function AddFriendsPage() {
           {loading ? 'กำลังเพิ่ม…' : 'เพิ่มเพื่อน'}
         </Button>
       </Stack>
+      {jobId && (
+        <Typography mt={2}>สถานะงาน: {jobStatus || 'pending'}</Typography>
+      )}
       <Snackbar
         open={!!message}
         autoHideDuration={3000}
