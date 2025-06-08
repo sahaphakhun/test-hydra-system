@@ -12,7 +12,6 @@ const links = [
     { href: '/create-group', label: 'สร้างกลุ่ม' },
     { href: '/add-friends', label: 'เพิ่มเพื่อน' },
     { href: '/number-sets', label: 'ชุดเบอร์' },
-    { href: '/adminn', label: 'แอดมิน' },
 ];
 function Navbar() {
     return (<material_1.AppBar position="static" color="primary">
