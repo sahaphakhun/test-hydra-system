@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import axios from 'axios';
 import { URL } from 'url';
-import HttpsProxyAgent from 'https-proxy-agent';
-import LineAccount from '../models/lineAccount';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { LineAccount } from '../models/LineAccount';
 import RegistrationRequest from '../models/RegistrationRequest';
 import { AutomationStatus, RegisterRequest, OtpRequest } from '../types';
 
