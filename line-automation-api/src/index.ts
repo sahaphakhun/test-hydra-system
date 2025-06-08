@@ -6,6 +6,7 @@ import { WebSocketServer } from 'ws';
 import { SERVER_CONFIG, DB_CONFIG } from './config';
 import automationRoutes from './routes/automationRoutes';
 import accountRoutes from './routes/accountRoutes';
+import adminRoutes from './routes/adminRoutes';
 import { setWebSocketServer } from './controllers/automationController';
 
 const app = express();
@@ -31,6 +32,7 @@ app.use(express.json());
 // Routes
 app.use('/', automationRoutes);
 app.use('/', accountRoutes);
+app.use('/', adminRoutes);
 
 // จัดการการเชื่อมต่อ WebSocket
 wss.on('connection', (ws: WebSocket, req: any) => {
