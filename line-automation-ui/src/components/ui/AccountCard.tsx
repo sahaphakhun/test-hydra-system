@@ -13,9 +13,13 @@ interface AccountCardProps {
    * เปิด dialog เพื่อกรอก OTP สำหรับบัญชีนี้
    */
   onEnterOtp?: (account: Account) => void;
+  /**
+   * ลองสมัครใหม่เมื่อเกิดข้อผิดพลาดหรือหมดเวลา OTP
+   */
+  onRetry?: (account: Account) => void;
 }
 
-export default function AccountCard({ account, onEdit, onDelete, onEnterOtp }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }: AccountCardProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -121,6 +125,11 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp }: A
         <MenuItem onClick={() => { onDelete?.(account.id); handleMenuClose(); }} sx={{ color: 'error.main' }}>
           ลบ
         </MenuItem>
+        {(account.status === 'error' || account.status === 'timeout') && (
+          <MenuItem onClick={() => { onRetry?.(account); handleMenuClose(); }}>
+            ลองสมัครใหม่
+          </MenuItem>
+        )}
       </Menu>
     </Card>
   );
