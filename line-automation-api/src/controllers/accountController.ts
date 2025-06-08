@@ -12,7 +12,7 @@ const createJob = async (type: string, accountId: string | undefined, data: any)
   return job;
 };
 
-const updateJobStatus = async (job: any, status: string, log?: string) => {
+const updateJobStatusInternal = async (job: any, status: string, log?: string) => {
   job.status = status as any;
   if (log) job.logs.push(log);
   await job.save();
@@ -67,7 +67,7 @@ export const addFriends = async (req: Request, res: Response) => {
     const numbers: string[] = list.chunks.flat();
     const job = await createJob('add_friends', accountId, { numbers });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้เพิ่มเพื่อน
-    await updateJobStatus(job, 'completed');
+    await updateJobStatusInternal(job, 'completed');
     return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${numbers.length} รายการ`, addedCount: numbers.length, jobId: job._id });
   } catch (error) {
     console.error('Error in addFriends:', error);
@@ -88,11 +88,25 @@ export const createGroup = async (req: Request, res: Response) => {
     const job = await createJob('create_group', accountId, { name });
     const newGroup = new LineGroup({ name, accountId, memberCount: 0 });
     await newGroup.save();
-    await updateJobStatus(job, 'completed');
+    await updateJobStatusInternal(job, 'completed');
     return res.status(201).json({ message: 'สร้างกลุ่มสำเร็จ', group: newGroup, jobId: job._id });
   } catch (error) {
     console.error('Error in createGroup:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างกลุ่ม' });
+  }
+};
+
+export const deleteGroup = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deletedGroup = await LineGroup.findByIdAndDelete(id);
+    if (!deletedGroup) {
+      return res.status(404).json({ message: 'ไม่พบกลุ่มที่ระบุ' });
+    }
+    return res.status(200).json({ message: 'ลบกลุ่มสำเร็จ' });
+  } catch (error) {
+    console.error('Error in deleteGroup:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบกลุ่ม' });
   }
 };
 
@@ -120,7 +134,7 @@ export const sendMessageToGroup = async (req: Request, res: Response) => {
 
     const job = await createJob('send_message', accountId, { groupId, message });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้ส่งข้อความ
-    await updateJobStatus(job, 'completed');
+    await updateJobStatusInternal(job, 'completed');
     return res
       .status(200)
       .json({ message: 'ส่งข้อความสำเร็จ', sent: true, jobId: job._id });
@@ -165,13 +179,71 @@ export const createPhoneNumberList = async (req: Request, res: Response) => {
 export const deletePhoneNumberList = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deleted = await PhoneNumberList.findByIdAndDelete(id);
-    if (!deleted) {
+    const deletedList = await PhoneNumberList.findByIdAndDelete(id);
+    if (!deletedList) {
       return res.status(404).json({ message: 'ไม่พบชุดเบอร์โทรศัพท์' });
     }
     return res.status(200).json({ message: 'ลบชุดเบอร์โทรศัพท์สำเร็จ' });
   } catch (error) {
     console.error('Error in deletePhoneNumberList:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบชุดเบอร์โทรศัพท์' });
+  }
+};
+
+// การจัดการงาน (Jobs)
+export const getJobs = async (req: Request, res: Response) => {
+  try {
+    const { type, accountId, status } = req.query;
+    const filter: any = {};
+    
+    if (type) filter.type = type;
+    if (accountId) filter.accountId = accountId;
+    if (status) filter.status = status;
+    
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    return res.status(200).json(jobs);
+  } catch (error) {
+    console.error('Error in getJobs:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลงาน' });
+  }
+};
+
+export const getJobById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'ไม่พบงานที่ระบุ' });
+    }
+    return res.status(200).json(job);
+  } catch (error) {
+    console.error('Error in getJobById:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลงาน' });
+  }
+};
+
+export const updateJobStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, log } = req.body;
+    
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'ไม่พบงานที่ระบุ' });
+    }
+    
+    job.status = status;
+    if (log) {
+      job.logs.push(log);
+    }
+    await job.save();
+    
+    // ส่ง WebSocket update
+    broadcastMessage('STATUS_UPDATE', { jobId: job._id, status: job.status });
+    
+    return res.status(200).json({ message: 'อัปเดตสถานะงานสำเร็จ', job });
+  } catch (error) {
+    console.error('Error in updateJobStatus:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตสถานะงาน' });
   }
 };

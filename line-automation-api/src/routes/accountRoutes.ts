@@ -11,6 +11,7 @@ router.get('/accounts/:id', accountController.getAccountById);
 router.get('/accounts/:accountId/groups', accountController.getGroupsByAccountId);
 router.post('/add-friends', accountController.addFriends);
 router.post('/create-group', accountController.createGroup);
+router.delete('/groups/:id', accountController.deleteGroup);
 // ส่งข้อความต้องระบุ accountId, groupId และ message ใน body
 router.post('/send-message', accountController.sendMessageToGroup);
 
@@ -18,5 +19,10 @@ router.post('/send-message', accountController.sendMessageToGroup);
 router.get('/phone-lists', accountController.getPhoneNumberLists);
 router.post('/number-sets', accountController.createPhoneNumberList);
 router.delete('/phone-lists/:id', accountController.deletePhoneNumberList);
+
+// การจัดการงาน (Jobs)
+router.get('/jobs', accountController.getJobs);
+router.get('/jobs/:id', accountController.getJobById);
+router.put('/jobs/:id/status', accountController.updateJobStatus);
 
 export default router; 

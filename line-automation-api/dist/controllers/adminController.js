@@ -42,17 +42,46 @@ const updateRegistrationRequestStatus = async (req, res) => {
         if (!requestEntry) {
             return res.status(404).json({ message: 'ไม่พบคำขอลงทะเบียน' });
         }
+        // ถ้าเปลี่ยนสถานะเป็น completed ให้สร้างบัญชีและลบ request
+        if (status === 'completed') {
+            // ตรวจสอบว่ามีบัญชีอยู่แล้วหรือไม่
+            const existingAccount = await LineAccount_1.LineAccount.findOne({ phoneNumber: requestEntry.phoneNumber });
+            if (existingAccount) {
+                return res.status(400).json({ message: 'เบอร์โทรศัพท์นี้มีในระบบแล้ว' });
+            }
+            // สร้างบัญชีใหม่ใน LineAccount
+            const newAccount = new LineAccount_1.LineAccount({
+                displayName: requestEntry.displayName,
+                userId: `user_${requestEntry.phoneNumber}_${Date.now()}`,
+                phoneNumber: requestEntry.phoneNumber,
+                email: `${requestEntry.phoneNumber}@temp.com`,
+                lineConfigId: '000000000000000000000000', // ObjectId ชั่วคราว
+            });
+            await newAccount.save();
+            // ลบ RegistrationRequest
+            await RegistrationRequest_1.default.findByIdAndDelete(id);
+            (0, websocket_1.broadcastMessage)('STATUS_UPDATE', {
+                message: `Account created and registration request removed for ${requestEntry.phoneNumber}`,
+                requestId: requestEntry._id,
+                phoneNumber: requestEntry.phoneNumber,
+                status: 'completed',
+                accountCreated: true,
+            });
+            return res.status(200).json({
+                message: 'สร้างบัญชีสำเร็จและลบคำขอลงทะเบียนแล้ว',
+                account: newAccount
+            });
+        }
+        // สำหรับสถานะอื่น ๆ ให้อัปเดตปกติ
         requestEntry.status = status;
         if (adminNotes) {
             requestEntry.adminNotes = adminNotes;
-        }
-        if (status === 'completed') {
-            requestEntry.completedAt = new Date();
         }
         await requestEntry.save();
         (0, websocket_1.broadcastMessage)('STATUS_UPDATE', {
             message: `Registration request ${requestEntry._id} status updated`,
             requestId: requestEntry._id,
+            phoneNumber: requestEntry.phoneNumber,
             status: requestEntry.status,
         });
         return res.status(200).json({ message: 'อัปเดตสถานะสำเร็จ', request: requestEntry });
@@ -75,23 +104,28 @@ const createAccountFromRequest = async (req, res) => {
         if (existingAccount) {
             return res.status(400).json({ message: 'เบอร์โทรศัพท์นี้มีในระบบแล้ว' });
         }
+        // สร้างบัญชีใหม่ใน LineAccount
         const newAccount = new LineAccount_1.LineAccount({
-            phoneNumber: requestEntry.phoneNumber,
             displayName: actualDisplayName || requestEntry.displayName,
-            password: actualPassword || requestEntry.password,
-            proxy: requestEntry.proxy,
-            status: 'active',
+            userId: `user_${requestEntry.phoneNumber}_${Date.now()}`,
+            phoneNumber: requestEntry.phoneNumber,
+            email: `${requestEntry.phoneNumber}@temp.com`,
+            lineConfigId: '000000000000000000000000', // ObjectId ชั่วคราว
         });
         await newAccount.save();
-        requestEntry.status = 'completed';
-        requestEntry.completedAt = new Date();
-        await requestEntry.save();
+        // ลบ RegistrationRequest หลังจากสร้างบัญชีเสร็จแล้ว
+        await RegistrationRequest_1.default.findByIdAndDelete(id);
         (0, websocket_1.broadcastMessage)('STATUS_UPDATE', {
-            message: `Account created for request ${requestEntry._id}`,
+            message: `Account created and registration request removed for ${requestEntry.phoneNumber}`,
             requestId: requestEntry._id,
-            status: requestEntry.status,
+            phoneNumber: requestEntry.phoneNumber,
+            status: 'completed',
+            accountCreated: true,
         });
-        return res.status(201).json({ message: 'สร้างบัญชีสำเร็จ', account: newAccount, request: requestEntry });
+        return res.status(201).json({
+            message: 'สร้างบัญชีสำเร็จและลบคำขอลงทะเบียนแล้ว',
+            account: newAccount
+        });
     }
     catch (error) {
         console.error('Error creating account from request:', error);

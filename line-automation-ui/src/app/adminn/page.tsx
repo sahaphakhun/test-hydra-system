@@ -31,6 +31,9 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Tabs,
+  Tab,
+  Badge,
 } from "@mui/material";
 import { Visibility, Delete, CheckCircle, Refresh, Search } from "@mui/icons-material";
 import api from "@/lib/api";
@@ -51,6 +54,32 @@ interface RegistrationRequest {
   adminNotes?: string;
 }
 
+interface LineAccount {
+  _id: string;
+  displayName: string;
+  userId: string;
+  phoneNumber?: string;
+  email?: string;
+  pictureUrl?: string;
+  statusMessage?: string;
+  tags: string[];
+  isBlocked: boolean;
+  lastInteraction: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Job {
+  _id: string;
+  type: string;
+  accountId?: string;
+  data: any;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  logs: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 const statusOptions = [
   { value: "all", label: "ทั้งหมด" },
   { value: "pending", label: "รอดำเนินการ" },
@@ -62,11 +91,18 @@ const statusOptions = [
 
 export default function AdminPage() {
   const [requests, setRequests] = useState<RegistrationRequest[]>([]);
+  const [accounts, setAccounts] = useState<LineAccount[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [selected, setSelected] = useState<RegistrationRequest | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [jobDetailOpen, setJobDetailOpen] = useState(false);
   const [editNotes, setEditNotes] = useState("");
   const [editStatus, setEditStatus] = useState<RegistrationRequest["status"] | "">("");
+  const [editJobStatus, setEditJobStatus] = useState<Job["status"] | "">("");
   const [actualDisplayName, setActualDisplayName] = useState("");
   const [actualPassword, setActualPassword] = useState("");
   const [createAccountLoading, setCreateAccountLoading] = useState(false);
@@ -75,6 +111,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [currentTab, setCurrentTab] = useState<"requests" | "accounts" | "jobs">("requests");
 
   // โหลดข้อมูล
   const fetchRequests = async () => {
@@ -91,8 +128,38 @@ export default function AdminPage() {
     }
   };
 
+  const fetchAccounts = async () => {
+    setAccountsLoading(true);
+    try {
+      const res = await api.get("/accounts");
+      setAccounts(res.data);
+    } catch {
+      setMessage("โหลดข้อมูลบัญชีล้มเหลว");
+      setMessageType("error");
+    } finally {
+      setAccountsLoading(false);
+    }
+  };
+
+  const fetchJobs = async () => {
+    setJobsLoading(true);
+    try {
+      const res = await api.get("/jobs");
+      setJobs(res.data);
+    } catch {
+      setMessage("โหลดข้อมูลงานล้มเหลว");
+      setMessageType("error");
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  const fetchAllData = async () => {
+    await Promise.all([fetchRequests(), fetchAccounts(), fetchJobs()]);
+  };
+
   useEffect(() => {
-    fetchRequests();
+    fetchAllData();
     // eslint-disable-next-line
   }, []);
 
@@ -106,14 +173,14 @@ export default function AdminPage() {
           data.type === "STATUS_UPDATE" ||
           (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId))
         ) {
-          fetchRequests();
+          fetchAllData();
         }
       });
       return unsubscribe;
     } catch (error) {
       console.error('Failed to setup WebSocket listener:', error);
       // ถ้า WebSocket ไม่ทำงาน ให้ใช้ polling แทน
-      const interval = setInterval(fetchRequests, 30000); // refresh ทุก 30 วินาที
+      const interval = setInterval(fetchAllData, 30000); // refresh ทุก 30 วินาที
       return () => clearInterval(interval);
     }
   }, [addMessageListener]);
@@ -155,7 +222,7 @@ export default function AdminPage() {
       setMessage("อัปเดตสำเร็จ");
       setMessageType("success");
       setDetailOpen(false);
-      fetchRequests();
+      fetchAllData();
     } catch {
       setMessage("อัปเดตล้มเหลว");
       setMessageType("error");
@@ -174,7 +241,7 @@ export default function AdminPage() {
       setMessage("สร้างบัญชีสำเร็จ");
       setMessageType("success");
       setDetailOpen(false);
-      fetchRequests();
+      fetchAllData();
     } catch {
       setMessage("สร้างบัญชีล้มเหลว");
       setMessageType("error");
@@ -190,7 +257,7 @@ export default function AdminPage() {
       await api.delete(`/admin/registration-requests/${id}`);
       setMessage("ลบสำเร็จ");
       setMessageType("success");
-      fetchRequests();
+      fetchAllData();
     } catch {
       setMessage("ลบล้มเหลว");
       setMessageType("error");
@@ -238,112 +305,271 @@ export default function AdminPage() {
       <Stack direction="row" alignItems="center" spacing={2} mb={2}>
         <Typography variant="h4">แดชบอร์ดแอดมิน</Typography>
         <Tooltip title="รีเฟรชข้อมูล">
-          <IconButton onClick={fetchRequests} disabled={refreshing}>
+          <IconButton onClick={fetchAllData} disabled={refreshing}>
             {refreshing ? <CircularProgress size={20} /> : <Refresh />}
           </IconButton>
         </Tooltip>
         <Box flex={1} />
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>สถานะ</InputLabel>
-          <Select
-            value={statusFilter}
-            label="สถานะ"
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            {statusOptions.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          size="small"
-          placeholder="ค้นหา..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-        />
+        {currentTab === "requests" && (
+          <>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>สถานะ</InputLabel>
+              <Select
+                value={statusFilter}
+                label="สถานะ"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                {statusOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              size="small"
+              placeholder="ค้นหา..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </>
+        )}
       </Stack>
-      <TableContainer component={Paper}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>เบอร์โทรศัพท์</TableCell>
-              <TableCell>ชื่อ</TableCell>
-              <TableCell>สถานะ</TableCell>
-              <TableCell>วันที่ขอ</TableCell>
-              <TableCell>OTP</TableCell>
-              <TableCell>หมายเหตุ</TableCell>
-              <TableCell align="center">Action</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)}>
+          <Tab 
+            label={
+              <Badge badgeContent={requests.length} color="primary">
+                คำขอลงทะเบียน
+              </Badge>
+            } 
+            value="requests" 
+          />
+          <Tab 
+            label={
+              <Badge badgeContent={accounts.length} color="success">
+                บัญชีที่ใช้งานได้
+              </Badge>
+            } 
+            value="accounts" 
+          />
+          <Tab 
+            label={
+              <Badge badgeContent={jobs.length} color="info">
+                งานที่ดำเนินการ
+              </Badge>
+            } 
+            value="jobs" 
+          />
+        </Tabs>
+      </Box>
+
+      {/* Registration Requests Table */}
+      {currentTab === "requests" && (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <CircularProgress size={32} />
-                </TableCell>
+                <TableCell>เบอร์โทรศัพท์</TableCell>
+                <TableCell>ชื่อ</TableCell>
+                <TableCell>สถานะ</TableCell>
+                <TableCell>วันที่ขอ</TableCell>
+                <TableCell>OTP</TableCell>
+                <TableCell>หมายเหตุ</TableCell>
+                <TableCell align="center">Action</TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  ไม่พบข้อมูล
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((req) => (
-                <TableRow key={req._id} hover>
-                  <TableCell>{req.phoneNumber}</TableCell>
-                  <TableCell>{req.displayName}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusText(req.status)}
-                      color={getStatusColor(req.status) as ChipProps["color"]}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>{new Date(req.requestedAt).toLocaleString()}</TableCell>
-                  <TableCell>
-                    {req.otpRequested ? (
-                      <CheckCircle color="success" fontSize="small" />
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {req.adminNotes ? (
-                      <Tooltip title={req.adminNotes}>
-                        <span>{req.adminNotes.slice(0, 16)}{req.adminNotes.length > 16 ? "..." : ""}</span>
-                      </Tooltip>
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="ดูรายละเอียด">
-                      <IconButton onClick={() => handleOpenDetail(req)}>
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="ลบคำขอ">
-                      <IconButton color="error" onClick={() => handleDelete(req._id)}>
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    ไม่พบข้อมูล
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((req) => (
+                  <TableRow key={req._id} hover>
+                    <TableCell>{req.phoneNumber}</TableCell>
+                    <TableCell>{req.displayName}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getStatusText(req.status)}
+                        color={getStatusColor(req.status) as ChipProps["color"]}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{new Date(req.requestedAt).toLocaleString()}</TableCell>
+                    <TableCell>
+                      {req.otpRequested ? (
+                        <CheckCircle color="success" fontSize="small" />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {req.adminNotes ? (
+                        <Tooltip title={req.adminNotes}>
+                          <span>{req.adminNotes.slice(0, 16)}{req.adminNotes.length > 16 ? "..." : ""}</span>
+                        </Tooltip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ดูรายละเอียด">
+                        <IconButton onClick={() => handleOpenDetail(req)}>
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="ลบคำขอ">
+                        <IconButton color="error" onClick={() => handleDelete(req._id)}>
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Accounts Table */}
+      {currentTab === "accounts" && (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>ชื่อแสดง</TableCell>
+                <TableCell>เบอร์โทรศัพท์</TableCell>
+                <TableCell>User ID</TableCell>
+                <TableCell>อีเมล</TableCell>
+                <TableCell>สถานะ</TableCell>
+                <TableCell>วันที่สร้าง</TableCell>
+                <TableCell>การโต้ตอบล่าสุด</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {accountsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <CircularProgress size={32} />
+                  </TableCell>
+                </TableRow>
+              ) : accounts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    ไม่พบบัญชี
+                  </TableCell>
+                </TableRow>
+              ) : (
+                accounts.map((account) => (
+                  <TableRow key={account._id} hover>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {account.pictureUrl && (
+                          <img 
+                            src={account.pictureUrl} 
+                            alt={account.displayName}
+                            style={{ width: 24, height: 24, borderRadius: '50%' }}
+                          />
+                        )}
+                        <Typography variant="body2">{account.displayName}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{account.phoneNumber || "-"}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {account.userId}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{account.email || "-"}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={account.isBlocked ? "ถูกบล็อก" : "ใช้งานได้"}
+                        color={account.isBlocked ? "error" : "success"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(account.createdAt).toLocaleDateString('th-TH')}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(account.lastInteraction).toLocaleDateString('th-TH')}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Jobs Table */}
+      {currentTab === "jobs" && (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>ชื่องาน</TableCell>
+                <TableCell>สถานะ</TableCell>
+                <TableCell>วันที่สร้าง</TableCell>
+                <TableCell>การโต้ตอบล่าสุด</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {jobsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    <CircularProgress size={32} />
+                  </TableCell>
+                </TableRow>
+              ) : jobs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    ไม่พบงาน
+                  </TableCell>
+                </TableRow>
+              ) : (
+                jobs.map((job) => (
+                  <TableRow key={job._id} hover>
+                    <TableCell>{job.type}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getStatusText(job.status)}
+                        color={getStatusColor(job.status) as ChipProps["color"]}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(job.createdAt).toLocaleDateString('th-TH')}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(job.updatedAt).toLocaleDateString('th-TH')}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Dialog รายละเอียด */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
