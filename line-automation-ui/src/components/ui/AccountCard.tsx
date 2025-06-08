@@ -33,7 +33,7 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
       case 'inactive':
         return 'warning';
       default:
-        return 'error';
+        return 'warning';
     }
   };
 
@@ -52,7 +52,7 @@ export default function AccountCard({ account, onEdit, onDelete }: AccountCardPr
       case 'error':
         return 'ผิดพลาด';
       default:
-        return 'ไม่ได้ใช้งาน';
+        return 'กำลังดำเนินการ';
     }
   };
 
