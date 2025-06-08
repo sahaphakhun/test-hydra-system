@@ -106,29 +106,57 @@ export const submitOtp = async (req: Request, res: Response) => {
 export const checkProxy = async (req: Request, res: Response) => {
   console.log('▶️ checkProxy called, body:', req.body);
   const { proxy }: CheckProxyRequest = req.body;
-  if (!proxy) {
+  
+  // ตรวจสอบว่ามีการส่ง Proxy มาหรือไม่
+  if (!proxy || proxy.trim() === '') {
     return res.status(400).json({ message: 'กรุณากรอก Proxy' });
   }
+  
+  // ตรวจสอบรูปแบบของ Proxy
   let urlObj;
   try {
     urlObj = new URL(proxy);
-  } catch {
+  } catch (error) {
+    console.error('Invalid proxy URL format:', error);
     return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง' });
   }
+  
+  // ตรวจสอบโปรโตคอลของ Proxy
   if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
-    return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง' });
+    return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง โปรโตคอลต้องเป็น http หรือ https เท่านั้น' });
   }
+  
   // ทดสอบการเช็ก proxy ผ่าน agent จริง
   try {
     const agent = new HttpsProxyAgent(proxy);
-    await axios.get('https://api.ipify.org?format=json', {
+    const response = await axios.get('https://api.ipify.org?format=json', {
       httpsAgent: agent,
       timeout: 5000,
     });
-    return res.status(200).json({ message: 'Proxy ใช้งานได้' });
+    
+    // ตรวจสอบว่าได้รับข้อมูล IP หรือไม่
+    if (response.data && response.data.ip) {
+      console.log('Proxy check successful, IP:', response.data.ip);
+      return res.status(200).json({ message: 'Proxy ใช้งานได้', ip: response.data.ip });
+    } else {
+      console.error('Proxy check failed: No IP in response');
+      return res.status(400).json({ message: 'ไม่สามารถใช้งาน Proxy นี้ได้: ไม่ได้รับข้อมูล IP' });
+    }
   } catch (error) {
     console.error('Proxy check error:', error);
-    return res.status(400).json({ message: 'ไม่สามารถใช้งาน Proxy นี้ได้' });
+    
+    // จัดการข้อผิดพลาดให้ละเอียดมากขึ้น
+    let errorMessage = 'ไม่สามารถใช้งาน Proxy นี้ได้';
+    
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อถูกปฏิเสธ';
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: การเชื่อมต่อหมดเวลา';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'ไม่สามารถเชื่อมต่อกับ Proxy ได้: ไม่พบที่อยู่ Host';
+    }
+    
+    return res.status(400).json({ message: errorMessage });
   }
 };
 
