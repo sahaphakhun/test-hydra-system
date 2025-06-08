@@ -165,6 +165,28 @@ export default function HomePage() {
     setMessageType('success');
   };
 
+  // ลองสมัครบัญชีใหม่เมื่อเกิดข้อผิดพลาดหรือหมดเวลารอ
+  const handleRetryAccount = async (account: Account) => {
+    try {
+      await api.post('/automation/register', {
+        phoneNumber: account.phoneNumber,
+        displayName: account.name,
+        password: account.password,
+        proxy: account.proxy,
+      });
+      setWaitingPhoneNumber(account.phoneNumber);
+      setWaitStartTime(Date.now());
+      setShowManualOtp(false);
+      setAccounts(prev => prev.map(acc => acc.id === account.id ? { ...acc, status: 'pending' } : acc));
+      setMessage('เริ่มสมัครใหม่แล้ว');
+      setMessageType('success');
+    } catch (error) {
+      console.error('Failed to retry registration:', error);
+      setMessage('ลองสมัครใหม่ไม่สำเร็จ');
+      setMessageType('error');
+    }
+  };
+
   /**
    * เปิด dialog เพื่อกรอก OTP สำหรับเบอร์โทรศัพท์ที่ระบุ
    */
@@ -262,7 +284,7 @@ export default function HomePage() {
               account={account}
               onEdit={handleEditAccount}
               onDelete={handleDeleteAccount}
-              onEnterOtp={handleOpenOtp}
+              onRetry={handleRetryAccount}
             />
           ))}
         </Box>

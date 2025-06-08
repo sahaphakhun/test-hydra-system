@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const material_1 = require("@mui/material");
 const icons_material_1 = require("@mui/icons-material");
 const react_1 = require("react");
-function AccountCard({ account, onEdit, onDelete }) {
+function AccountCard({ account, onEdit, onDelete, onRetry }) {
     const [anchorEl, setAnchorEl] = (0, react_1.useState)(null);
     const handleMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
@@ -68,6 +68,11 @@ function AccountCard({ account, onEdit, onDelete }) {
         <material_1.MenuItem onClick={() => { onDelete === null || onDelete === void 0 ? void 0 : onDelete(account.id); handleMenuClose(); }} sx={{ color: 'error.main' }}>
           ลบ
         </material_1.MenuItem>
+        {(account.status === 'error' || account.status === 'timeout') && (
+          <material_1.MenuItem onClick={() => { onRetry === null || onRetry === void 0 ? void 0 : onRetry(account); handleMenuClose(); }}>
+            ลองสมัครใหม่
+          </material_1.MenuItem>
+        )}
       </material_1.Menu>
     </material_1.Card>);
 }
