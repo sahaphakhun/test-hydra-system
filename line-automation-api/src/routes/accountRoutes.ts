@@ -11,6 +11,7 @@ router.get('/accounts/:id', accountController.getAccountById);
 router.get('/accounts/:accountId/groups', accountController.getGroupsByAccountId);
 router.post('/add-friends', accountController.addFriends);
 router.post('/create-group', accountController.createGroup);
+// ส่งข้อความต้องระบุ accountId, groupId และ message ใน body
 router.post('/send-message', accountController.sendMessageToGroup);
 
 // การจัดการชุดเบอร์โทรศัพท์
