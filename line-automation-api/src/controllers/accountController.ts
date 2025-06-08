@@ -56,14 +56,19 @@ export const getGroupsByAccountId = async (req: Request, res: Response) => {
 
 export const addFriends = async (req: Request, res: Response) => {
   try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    const { accountId, phoneListId } = req.body;
+    if (!accountId || !phoneListId) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    const job = await createJob('add_friends', undefined, { ids });
+    const list = await PhoneNumberList.findById(phoneListId);
+    if (!list) {
+      return res.status(404).json({ message: 'ไม่พบชุดเบอร์โทรศัพท์' });
+    }
+    const numbers: string[] = list.chunks.flat();
+    const job = await createJob('add_friends', accountId, { numbers });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้เพิ่มเพื่อน
     await updateJobStatus(job, 'completed');
-    return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${ids.length} รายการ`, addedCount: ids.length, jobId: job._id });
+    return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${numbers.length} รายการ`, addedCount: numbers.length, jobId: job._id });
   } catch (error) {
     console.error('Error in addFriends:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการเพิ่มเพื่อน' });
