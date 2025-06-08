@@ -34,6 +34,7 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
   });
   const [loading, setLoading] = useState(false);
   const [proxyStatus, setProxyStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [proxyErrorMessage, setProxyErrorMessage] = useState<string>('');
 
   const handleInputChange = (field: keyof CreateAccountData) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -48,26 +49,60 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
   const checkProxy = async () => {
     const proxy = formData.proxy?.trim();
     if (!proxy) return;
+    
+    // รีเซ็ตข้อความแสดงข้อผิดพลาด
+    setProxyErrorMessage('');
+    
     // ตรวจสอบรูปแบบเบื้องต้น
     try {
       const url = new URL(proxy);
       if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         setProxyStatus('invalid');
+        setProxyErrorMessage('โปรโตคอลต้องเป็น http หรือ https เท่านั้น');
         return;
       }
     } catch {
       setProxyStatus('invalid');
+      setProxyErrorMessage('รูปแบบ Proxy ไม่ถูกต้อง');
       return;
     }
 
     setProxyStatus('checking');
     try {
       // เรียก API เพื่อเช็ก proxy
-      await api.post('/automation/check-proxy', { proxy });
-      setProxyStatus('valid');
-    } catch (error) {
+      const response = await api.post('/automation/check-proxy', { proxy });
+      if (response.status === 200) {
+        setProxyStatus('valid');
+      } else {
+        // กรณีที่ API ตอบกลับมา แต่ไม่ใช่ status 200
+        setProxyStatus('invalid');
+        setProxyErrorMessage(response.data?.message || 'ไม่สามารถใช้งาน Proxy นี้ได้');
+      }
+    } catch (error: unknown) {
       console.error('Check proxy failed:', error);
       setProxyStatus('invalid');
+      
+      // จัดการข้อความแสดงข้อผิดพลาด
+      if (typeof error === 'object' && error !== null) {
+        const errorObj = error as { 
+          response?: { 
+            data?: { 
+              message?: string 
+            } 
+          };
+          message?: string;
+        };
+        
+        if (errorObj.response?.data?.message) {
+          setProxyErrorMessage(errorObj.response.data.message);
+        } else if (errorObj.message) {
+          setProxyErrorMessage(`เกิดข้อผิดพลาด: ${errorObj.message}`);
+        } else {
+          setProxyErrorMessage('ไม่สามารถเชื่อมต่อกับ API เพื่อตรวจสอบ Proxy');
+        }
+      } else {
+        setProxyErrorMessage('ไม่สามารถเชื่อมต่อกับ API เพื่อตรวจสอบ Proxy');
+      }
     }
   };
 
@@ -179,7 +214,9 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
                 <Alert severity="success" sx={{ py: 0 }}>Proxy ใช้งานได้</Alert>
               )}
               {proxyStatus === 'invalid' && (
-                <Alert severity="error" sx={{ py: 0 }}>Proxy ใช้งานไม่ได้</Alert>
+                <Alert severity="error" sx={{ py: 0 }}>
+                  {proxyErrorMessage || 'Proxy ใช้งานไม่ได้'}
+                </Alert>
               )}
             </Box>
           </Box>

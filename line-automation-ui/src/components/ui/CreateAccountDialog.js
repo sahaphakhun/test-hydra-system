@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const material_1 = require("@mui/material");
 const icons_material_1 = require("@mui/icons-material");
 const react_1 = require("react");
+const api_1 = require("@/lib/api");
 function CreateAccountDialog({ open, onClose, onSubmit }) {
     var _a;
     const [formData, setFormData] = (0, react_1.useState)({
@@ -23,6 +24,7 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
     });
     const [loading, setLoading] = (0, react_1.useState)(false);
     const [proxyStatus, setProxyStatus] = (0, react_1.useState)('idle');
+    const [proxyErrorMessage, setProxyErrorMessage] = (0, react_1.useState)('');
     const handleInputChange = (field) => (event) => {
         setFormData(prev => (Object.assign(Object.assign({}, prev), { [field]: event.target.value })));
         if (field === 'proxy') {
@@ -33,14 +35,47 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
         var _b;
         if (!((_b = formData.proxy) === null || _b === void 0 ? void 0 : _b.trim()))
             return;
+        
+        // รีเซ็ตข้อความแสดงข้อผิดพลาด
+        setProxyErrorMessage('');
+        
+        // ตรวจสอบรูปแบบเบื้องต้น
+        try {
+            const url = new URL(formData.proxy);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                setProxyStatus('invalid');
+                setProxyErrorMessage('โปรโตคอลต้องเป็น http หรือ https เท่านั้น');
+                return;
+            }
+        } catch (error) {
+            setProxyStatus('invalid');
+            setProxyErrorMessage('รูปแบบ Proxy ไม่ถูกต้อง');
+            return;
+        }
+        
         setProxyStatus('checking');
         try {
-            // จำลองการเช็ก proxy (ในความเป็นจริงจะเรียก API)
-            yield new Promise(resolve => setTimeout(resolve, 2000));
-            setProxyStatus('valid');
-        }
-        catch (_c) {
+            // เรียกใช้ API จริงเพื่อตรวจสอบ Proxy ผ่าน Hydra API
+            const sanitizedProxy = formData.proxy.trim().replace(/^https?:\/\//, '');
+            const response = yield api_1.default.post('/automation/test-proxy', { proxy: sanitizedProxy });
+            if (response.data?.success) {
+                setProxyStatus('valid');
+            } else {
+                setProxyStatus('invalid');
+                setProxyErrorMessage(response.data?.message || 'ไม่สามารถใช้งาน Proxy นี้ได้');
+            }
+        } catch (error) {
+            console.error('Check proxy failed:', error);
             setProxyStatus('invalid');
+            
+            // จัดการข้อความแสดงข้อผิดพลาด
+            if (error.response && error.response.data && error.response.data.message) {
+                setProxyErrorMessage(error.response.data.message);
+            } else if (error.message) {
+                setProxyErrorMessage(`เกิดข้อผิดพลาด: ${error.message}`);
+            } else {
+                setProxyErrorMessage('ไม่สามารถเชื่อมต่อกับ API เพื่อตรวจสอบ Proxy');
+            }
         }
     });
     const handleSubmit = () => __awaiter(this, void 0, void 0, function* () {
@@ -108,7 +143,9 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
                 เช็ก Proxy
               </material_1.Button>
               {proxyStatus === 'valid' && (<material_1.Alert severity="success" sx={{ py: 0 }}>Proxy ใช้งานได้</material_1.Alert>)}
-              {proxyStatus === 'invalid' && (<material_1.Alert severity="error" sx={{ py: 0 }}>Proxy ใช้งานไม่ได้</material_1.Alert>)}
+              {proxyStatus === 'invalid' && (<material_1.Alert severity="error" sx={{ py: 0 }}>
+                {proxyErrorMessage || 'Proxy ใช้งานไม่ได้'}
+              </material_1.Alert>)}
             </material_1.Box>
           </material_1.Box>
         </material_1.Stack>
