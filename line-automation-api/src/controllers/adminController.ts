@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import RegistrationRequest from '../models/RegistrationRequest';
 import { LineAccount } from '../models/LineAccount';
+import Job from '../models/Job';
+import { broadcastMessage } from '../websocket';
 
 export const getAllRegistrationRequests = async (req: Request, res: Response) => {
   try {
@@ -91,4 +93,32 @@ export const deleteRegistrationRequest = async (req: Request, res: Response) => 
     console.error('Error deleting registration request:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบคำขอลงทะเบียน' });
   }
-}; 
+};
+
+export const getAllJobs = async (req: Request, res: Response) => {
+  try {
+    const jobs = await Job.find().sort({ createdAt: -1 });
+    return res.status(200).json(jobs);
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงรายการงาน' });
+  }
+};
+
+export const updateJobStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'ไม่พบงาน' });
+    }
+    job.status = status;
+    await job.save();
+    broadcastMessage('STATUS_UPDATE', { jobId: job._id, status });
+    return res.status(200).json(job);
+  } catch (error) {
+    console.error('Error updating job status:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตสถานะงาน' });
+  }
+};
