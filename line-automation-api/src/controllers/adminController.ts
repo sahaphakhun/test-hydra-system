@@ -47,6 +47,7 @@ export const updateRegistrationRequestStatus = async (req: Request, res: Respons
     broadcastMessage('STATUS_UPDATE', {
       message: `Registration request ${requestEntry._id} status updated`,
       requestId: requestEntry._id,
+      phoneNumber: requestEntry.phoneNumber,
       status: requestEntry.status,
     });
     return res.status(200).json({ message: 'อัปเดตสถานะสำเร็จ', request: requestEntry });
@@ -82,6 +83,7 @@ export const createAccountFromRequest = async (req: Request, res: Response) => {
     broadcastMessage('STATUS_UPDATE', {
       message: `Account created for request ${requestEntry._id}`,
       requestId: requestEntry._id,
+      phoneNumber: requestEntry.phoneNumber,
       status: requestEntry.status,
     });
     return res.status(201).json({ message: 'สร้างบัญชีสำเร็จ', account: newAccount, request: requestEntry });

@@ -55,7 +55,50 @@ export default function HomePage() {
         console.error('Failed to parse saved accounts:', error);
       }
     }
+    
+    // ดึงข้อมูลบัญชีจาก API เพื่อซิงค์สถานะ
+    fetchAccountsFromAPI();
   }, []);
+
+  // ฟังก์ชันดึงข้อมูลบัญชีจาก API
+  const fetchAccountsFromAPI = async () => {
+    try {
+      const response = await api.get('/accounts');
+      const apiAccounts = response.data.map((acc: any) => ({
+        id: acc._id || acc.phoneNumber,
+        name: acc.displayName || acc.name,
+        phoneNumber: acc.phoneNumber,
+        password: acc.password || '',
+        proxy: acc.proxy,
+        status: acc.status || 'active',
+        createdAt: acc.createdAt || new Date().toISOString(),
+        lastActive: acc.lastActive
+      }));
+      
+      // รวมข้อมูลจาก localStorage และ API
+      const savedAccounts = localStorage.getItem('line-accounts');
+      if (savedAccounts) {
+        const localAccounts: Account[] = JSON.parse(savedAccounts);
+        const mergedAccounts = localAccounts.map(localAcc => {
+          const apiAcc = apiAccounts.find((api: Account) => api.phoneNumber === localAcc.phoneNumber);
+          return apiAcc ? { ...localAcc, ...apiAcc } : localAcc;
+        });
+        
+        // เพิ่มบัญชีใหม่จาก API ที่ไม่มีใน localStorage
+        apiAccounts.forEach((apiAcc: Account) => {
+          if (!mergedAccounts.find(acc => acc.phoneNumber === apiAcc.phoneNumber)) {
+            mergedAccounts.push(apiAcc);
+          }
+        });
+        
+        setAccounts(mergedAccounts);
+      } else {
+        setAccounts(apiAccounts);
+      }
+    } catch (error) {
+      console.error('Failed to fetch accounts from API:', error);
+    }
+  };
 
   // บันทึกข้อมูลบัญชีลง localStorage เมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
@@ -74,21 +117,32 @@ export default function HomePage() {
 
     const socket = new WebSocket(wsUrl);
 
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+    };
+
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'statusUpdate' && data.phoneNumber) {
+        console.log('WebSocket message received:', data);
+        
+        // รองรับหลายรูปแบบของ message
+        if ((data.type === 'statusUpdate' || data.type === 'STATUS_UPDATE') && data.phoneNumber) {
           // บางกรณี backend อาจส่งสถานะในรูปแบบอื่น ๆ เช่น otpWait, otp_wait
           const rawStatus: string = data.status;
           // แปลงสถานะให้เป็นรูปแบบที่ UI รองรับ
           const normalizedStatus: Account['status'] =
-            rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
+            rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp' || rawStatus === 'awaiting_otp'
               ? 'awaiting_otp'
-              : rawStatus === 'success'
+              : rawStatus === 'success' || rawStatus === 'completed'
               ? 'completed'
-              : rawStatus === 'error'
+              : rawStatus === 'error' || rawStatus === 'failed'
               ? 'failed'
+              : rawStatus === 'processing'
+              ? 'processing'
               : (rawStatus as Account['status']);
+
+          console.log(`Updating status for ${data.phoneNumber}: ${rawStatus} -> ${normalizedStatus}`);
 
           // อัปเดตสถานะใน state
           setAccounts((prev) =>
@@ -117,16 +171,37 @@ export default function HomePage() {
 
           return; // จบ early
         }
+        
+        // รองรับ message จากหน้าแอดมิน
+        if (data.type === 'REGISTRATION_UPDATE' || data.type === 'registrationUpdate') {
+          // รีเฟรชข้อมูลจาก API
+          fetchAccountsFromAPI();
+        }
       } catch (err) {
         console.error('Invalid WS message', err);
       }
     };
 
-    socket.onerror = console.error;
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
 
     return () => {
       socket.close();
     };
+  }, []);
+
+  // รีเฟรชข้อมูลเป็นระยะ
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAccountsFromAPI();
+    }, 10000); // รีเฟรชทุก 5 วินาที
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateAccount = async (data: CreateAccountData) => {
@@ -312,6 +387,7 @@ export default function HomePage() {
               onEdit={handleEditAccount}
               onDelete={handleDeleteAccount}
               onRetry={handleRetryAccount}
+              onEnterOtp={handleOpenOtp}
             />
           ))}
         </Box>

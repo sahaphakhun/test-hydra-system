@@ -62,6 +62,7 @@ const updateRegistrationRequestStatus = (req, res) => __awaiter(void 0, void 0, 
         (0, websocket_1.broadcastMessage)('STATUS_UPDATE', {
             message: `Registration request ${requestEntry._id} status updated`,
             requestId: requestEntry._id,
+            phoneNumber: requestEntry.phoneNumber,
             status: requestEntry.status,
         });
         return res.status(200).json({ message: 'อัปเดตสถานะสำเร็จ', request: requestEntry });
@@ -98,6 +99,7 @@ const createAccountFromRequest = (req, res) => __awaiter(void 0, void 0, void 0,
         (0, websocket_1.broadcastMessage)('STATUS_UPDATE', {
             message: `Account created for request ${requestEntry._id}`,
             requestId: requestEntry._id,
+            phoneNumber: requestEntry.phoneNumber,
             status: requestEntry.status,
         });
         return res.status(201).json({ message: 'สร้างบัญชีสำเร็จ', account: newAccount, request: requestEntry });
