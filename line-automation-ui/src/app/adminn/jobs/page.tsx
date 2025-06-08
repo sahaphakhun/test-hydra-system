@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Check } from "@mui/icons-material";
 import api from "@/lib/api";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 
 interface Job {
   _id: string;
@@ -49,19 +50,15 @@ export default function JobsPage() {
     }
   };
 
+  const { addMessageListener } = useWebSocket();
+
   useEffect(() => {
     fetchJobs();
-    const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!rawWsUrl) return;
-    const ws = new WebSocket(rawWsUrl.replace(/^http/, "ws"));
-    ws.onmessage = (ev) => {
-      try {
-        const d = JSON.parse(ev.data);
-        if (d.type === "STATUS_UPDATE" && d.payload?.jobId) fetchJobs();
-      } catch {}
-    };
-    return () => ws.close();
-  }, []);
+    const unsubscribe = addMessageListener((d) => {
+      if (d.type === "STATUS_UPDATE" && d.payload?.jobId) fetchJobs();
+    });
+    return unsubscribe;
+  }, [addMessageListener]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

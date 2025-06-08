@@ -34,6 +34,7 @@ import {
 } from "@mui/material";
 import { Visibility, Delete, CheckCircle, Refresh, Search } from "@mui/icons-material";
 import api from "@/lib/api";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 
 interface RegistrationRequest {
   _id: string;
@@ -95,22 +96,20 @@ export default function AdminPage() {
     // eslint-disable-next-line
   }, []);
 
+  const { addMessageListener } = useWebSocket();
+
   // websocket real-time
   useEffect(() => {
-    const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!rawWsUrl) return;
-    const wsUrl = rawWsUrl.replace(/^http/, "ws");
-    const socket = new WebSocket(wsUrl);
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId)) {
-          fetchRequests();
-        }
-      } catch {}
-    };
-    return () => socket.close();
-  }, []);
+    const unsubscribe = addMessageListener((data) => {
+      if (
+        data.type === "STATUS_UPDATE" ||
+        (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId))
+      ) {
+        fetchRequests();
+      }
+    });
+    return unsubscribe;
+  }, [addMessageListener]);
 
   // ฟิลเตอร์/ค้นหา
   const filtered = useMemo(() => {
