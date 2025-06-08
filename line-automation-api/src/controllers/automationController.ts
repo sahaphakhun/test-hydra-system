@@ -115,16 +115,15 @@ export const submitOtp = async (req: Request, res: Response) => {
     );
     requestEntry.status = 'processing';
     await requestEntry.save();
-    setTimeout(() => {
-      setTimeout(async () => {
-        try {
-          requestEntry.status = 'completed';
-          requestEntry.completedAt = new Date();
-          await requestEntry.save();
-        } catch (err) {
-          console.error('Failed to update registration request status:', err);
+    setTimeout(async () => {
+      try {
+        requestEntry.status = 'completed';
+        requestEntry.completedAt = new Date();
+        await requestEntry.save();
+      } catch (err) {
+        console.error('Failed to update registration request status:', err);
       }
-    sendStatusUpdate(
+      sendStatusUpdate(
         phoneNumber,
         AutomationStatus.SUCCESS,
         'ข้อมูลของคุณถูกส่งไปยังทีมงานเรียบร้อยแล้ว เรากำลังดำเนินการสมัครบัญชีให้คุณ',
