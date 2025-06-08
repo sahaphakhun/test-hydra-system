@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   Container,
   Typography,
@@ -24,15 +24,16 @@ import {
   Paper,
   IconButton,
   Tooltip,
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import {
-  Visibility,
-  Delete,
-  CheckCircle,
-  Refresh,
-} from '@mui/icons-material';
-import api from '@/lib/api';
+  Stack,
+  InputAdornment,
+  CircularProgress,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+import { Visibility, Delete, CheckCircle, Refresh, Search } from "@mui/icons-material";
+import api from "@/lib/api";
 
 interface RegistrationRequest {
   _id: string;
@@ -41,7 +42,7 @@ interface RegistrationRequest {
   password: string;
   proxy?: string;
   autoLogout: boolean;
-  status: 'pending' | 'processing' | 'awaiting_otp' | 'completed' | 'failed';
+  status: "pending" | "processing" | "awaiting_otp" | "completed" | "failed";
   requestedAt: string;
   completedAt?: string;
   otpRequested: boolean;
@@ -49,402 +50,387 @@ interface RegistrationRequest {
   adminNotes?: string;
 }
 
+const statusOptions = [
+  { value: "all", label: "ทั้งหมด" },
+  { value: "pending", label: "รอดำเนินการ" },
+  { value: "processing", label: "กำลังดำเนินการ" },
+  { value: "awaiting_otp", label: "รอ OTP" },
+  { value: "completed", label: "เสร็จสมบูรณ์" },
+  { value: "failed", label: "ล้มเหลว" },
+];
+
 export default function AdminPage() {
   const [requests, setRequests] = useState<RegistrationRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
-  const [detailDialog, setDetailDialog] = useState(false);
-  const [createAccountDialog, setCreateAccountDialog] = useState(false);
-  const [actualDisplayName, setActualDisplayName] = useState('');
-  const [actualPassword, setActualPassword] = useState('');
-  const [adminNotes, setAdminNotes] = useState('');
+  const [selected, setSelected] = useState<RegistrationRequest | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [editNotes, setEditNotes] = useState("");
+  const [editStatus, setEditStatus] = useState<RegistrationRequest["status"] | "">("");
+  const [actualDisplayName, setActualDisplayName] = useState("");
+  const [actualPassword, setActualPassword] = useState("");
+  const [createAccountLoading, setCreateAccountLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [refreshing, setRefreshing] = useState(false);
 
-  // โหลดข้อมูลคำขอลงทะเบียน
+  // โหลดข้อมูล
   const fetchRequests = async () => {
+    setRefreshing(true);
     try {
-      setLoading(true);
-      const response = await api.get('/admin/registration-requests');
-      setRequests(response.data);
-    } catch (error) {
-      console.error('Failed to fetch requests:', error);
-      setMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล');
-      setMessageType('error');
+      const res = await api.get("/admin/registration-requests");
+      setRequests(res.data);
+    } catch {
+      setMessage("โหลดข้อมูลล้มเหลว");
+      setMessageType("error");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchRequests();
+    // eslint-disable-next-line
   }, []);
 
-  // เชื่อมต่อ WebSocket เพื่ออัปเดตสถานะแบบ real-time
+  // websocket real-time
   useEffect(() => {
     const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!rawWsUrl) {
-      console.warn('NEXT_PUBLIC_WS_URL is not defined. ไม่สามารถเชื่อมต่อ WebSocket');
-      return;
-    }
-
-    const wsUrl = rawWsUrl.replace(/^http/, 'ws');
+    if (!rawWsUrl) return;
+    const wsUrl = rawWsUrl.replace(/^http/, "ws");
     const socket = new WebSocket(wsUrl);
-
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'statusUpdate' && data.details?.requestId) {
-          // รีเฟรชรายการคำขอเมื่อมีการอัปเดตสถานะ
+        if (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId)) {
           fetchRequests();
         }
-      } catch (err) {
-        console.error('Invalid WS message', err);
-      }
+      } catch {}
     };
-    socket.onerror = (err) => console.error('WebSocket error:', err);
-
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, []);
 
-  // แสดงรายละเอียดคำขอ
-  const handleViewDetails = (request: RegistrationRequest) => {
-    setSelectedRequest(request);
-    setAdminNotes(request.adminNotes || '');
-    setDetailDialog(true);
+  // ฟิลเตอร์/ค้นหา
+  const filtered = useMemo(() => {
+    let list = requests;
+    if (statusFilter !== "all") list = list.filter((r) => r.status === statusFilter);
+    if (search.trim()) {
+      const s = search.trim().toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.phoneNumber.includes(s) ||
+          r.displayName.toLowerCase().includes(s) ||
+          (r.adminNotes && r.adminNotes.toLowerCase().includes(s))
+      );
+    }
+    return list;
+  }, [requests, search, statusFilter]);
+
+  // เปิด dialog รายละเอียด
+  const handleOpenDetail = (req: RegistrationRequest) => {
+    setSelected(req);
+    setEditNotes(req.adminNotes || "");
+    setEditStatus(req.status);
+    setActualDisplayName(req.displayName);
+    setActualPassword(req.password);
+    setDetailOpen(true);
   };
 
-  // อัปเดตสถานะคำขอ
-  const handleUpdateStatus = async (requestId: string, status: string) => {
+  // อัปเดตสถานะ/โน้ต
+  const handleUpdate = async () => {
+    if (!selected) return;
     try {
-      await api.put(`/admin/registration-requests/${requestId}/status`, {
-        status,
-        adminNotes,
+      await api.put(`/admin/registration-requests/${selected._id}/status`, {
+        status: editStatus,
+        adminNotes: editNotes,
       });
-      setMessage('อัปเดตสถานะสำเร็จ');
-      setMessageType('success');
+      setMessage("อัปเดตสำเร็จ");
+      setMessageType("success");
+      setDetailOpen(false);
       fetchRequests();
-      setDetailDialog(false);
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      setMessage('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
-      setMessageType('error');
+    } catch {
+      setMessage("อัปเดตล้มเหลว");
+      setMessageType("error");
     }
   };
 
-  // เปิด dialog สร้างบัญชี
-  const handleOpenCreateAccount = (request: RegistrationRequest) => {
-    setSelectedRequest(request);
-    setActualDisplayName(request.displayName);
-    setActualPassword(request.password);
-    setCreateAccountDialog(true);
-  };
-
-  // สร้างบัญชี LINE จากคำขอ
+  // สร้างบัญชี
   const handleCreateAccount = async () => {
-    if (!selectedRequest) return;
-
+    if (!selected) return;
+    setCreateAccountLoading(true);
     try {
-      await api.post(`/admin/registration-requests/${selectedRequest._id}/create-account`, {
+      await api.post(`/admin/registration-requests/${selected._id}/create-account`, {
         actualDisplayName,
         actualPassword,
       });
-      setMessage('สร้างบัญชีสำเร็จ');
-      setMessageType('success');
+      setMessage("สร้างบัญชีสำเร็จ");
+      setMessageType("success");
+      setDetailOpen(false);
       fetchRequests();
-      setCreateAccountDialog(false);
-      setActualDisplayName('');
-      setActualPassword('');
-    } catch (error) {
-      console.error('Failed to create account:', error);
-      setMessage('เกิดข้อผิดพลาดในการสร้างบัญชี');
-      setMessageType('error');
+    } catch {
+      setMessage("สร้างบัญชีล้มเหลว");
+      setMessageType("error");
+    } finally {
+      setCreateAccountLoading(false);
     }
   };
 
   // ลบคำขอ
-  const handleDeleteRequest = async (requestId: string) => {
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?')) return;
-
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("ยืนยันการลบคำขอนี้?")) return;
     try {
-      await api.delete(`/admin/registration-requests/${requestId}`);
-      setMessage('ลบคำขอสำเร็จ');
-      setMessageType('success');
+      await api.delete(`/admin/registration-requests/${id}`);
+      setMessage("ลบสำเร็จ");
+      setMessageType("success");
       fetchRequests();
-    } catch (error) {
-      console.error('Failed to delete request:', error);
-      setMessage('เกิดข้อผิดพลาดในการลบคำขอ');
-      setMessageType('error');
+    } catch {
+      setMessage("ลบล้มเหลว");
+      setMessageType("error");
     }
   };
 
-  // แสดงสี Chip ตามสถานะ
+  // สีสถานะ
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'warning';
-      case 'processing': return 'info';
-      case 'awaiting_otp': return 'secondary';
-      case 'completed': return 'success';
-      case 'failed': return 'error';
-      default: return 'default';
+      case "pending":
+        return "warning";
+      case "processing":
+        return "info";
+      case "awaiting_otp":
+        return "secondary";
+      case "completed":
+        return "success";
+      case "failed":
+        return "error";
+      default:
+        return "default";
     }
   };
 
-  // แสดงข้อความสถานะ
+  // ชื่อสถานะ
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return 'รอดำเนินการ';
-      case 'processing': return 'กำลังดำเนินการ';
-      case 'awaiting_otp': return 'รอ OTP';
-      case 'completed': return 'เสร็จสิ้น';
-      case 'failed': return 'ล้มเหลว';
-      default: return status;
+      case "pending":
+        return "รอดำเนินการ";
+      case "processing":
+        return "กำลังดำเนินการ";
+      case "awaiting_otp":
+        return "รอ OTP";
+      case "completed":
+        return "เสร็จสมบูรณ์";
+      case "failed":
+        return "ล้มเหลว";
+      default:
+        return status;
     }
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" component="h1">
-          Admin Dashboard - คำขอลงทะเบียน LINE
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Refresh />}
-          onClick={fetchRequests}
-          disabled={loading}
-        >
-          รีเฟรช
-        </Button>
-      </Box>
-
-      {loading ? (
-        <Box display="flex" justifyContent="center" py={4}>
-          <Typography>กำลังโหลดข้อมูล...</Typography>
-        </Box>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+        <Typography variant="h4">แดชบอร์ดแอดมิน</Typography>
+        <Tooltip title="รีเฟรชข้อมูล">
+          <IconButton onClick={fetchRequests} disabled={refreshing}>
+            {refreshing ? <CircularProgress size={20} /> : <Refresh />}
+          </IconButton>
+        </Tooltip>
+        <Box flex={1} />
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>สถานะ</InputLabel>
+          <Select
+            value={statusFilter}
+            label="สถานะ"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            {statusOptions.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          size="small"
+          placeholder="ค้นหา..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Stack>
+      <TableContainer component={Paper}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>เบอร์โทรศัพท์</TableCell>
+              <TableCell>ชื่อ</TableCell>
+              <TableCell>สถานะ</TableCell>
+              <TableCell>วันที่ขอ</TableCell>
+              <TableCell>OTP</TableCell>
+              <TableCell>หมายเหตุ</TableCell>
+              <TableCell align="center">Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
               <TableRow>
-                <TableCell>เบอร์โทรศัพท์</TableCell>
-                <TableCell>ชื่อแสดง</TableCell>
-                <TableCell>สถานะ</TableCell>
-                <TableCell>วันที่ขอ</TableCell>
-                <TableCell>OTP ร้องขอ</TableCell>
-                <TableCell align="center">การจัดการ</TableCell>
+                <TableCell colSpan={7} align="center">
+                  <CircularProgress size={32} />
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {requests.map((request) => (
-                <TableRow key={request._id}>
-                  <TableCell>{request.phoneNumber}</TableCell>
-                  <TableCell>{request.displayName}</TableCell>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  ไม่พบข้อมูล
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((req) => (
+                <TableRow key={req._id} hover>
+                  <TableCell>{req.phoneNumber}</TableCell>
+                  <TableCell>{req.displayName}</TableCell>
                   <TableCell>
                     <Chip
-                      label={getStatusText(request.status)}
-                      color={getStatusColor(request.status) as ChipProps['color']}
+                      label={getStatusText(req.status)}
+                      color={getStatusColor(req.status) as ChipProps["color"]}
                       size="small"
                     />
                   </TableCell>
+                  <TableCell>{new Date(req.requestedAt).toLocaleString()}</TableCell>
                   <TableCell>
-                    {new Date(request.requestedAt).toLocaleDateString('th-TH')}
+                    {req.otpRequested ? (
+                      <CheckCircle color="success" fontSize="small" />
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell>
-                    {request.otpRequested ? (
-                      <Chip label="ร้องขอแล้ว" color="success" size="small" />
+                    {req.adminNotes ? (
+                      <Tooltip title={req.adminNotes}>
+                        <span>{req.adminNotes.slice(0, 16)}{req.adminNotes.length > 16 ? "..." : ""}</span>
+                      </Tooltip>
                     ) : (
-                      <Chip label="ยังไม่ร้องขอ" color="default" size="small" />
+                      "-"
                     )}
                   </TableCell>
                   <TableCell align="center">
                     <Tooltip title="ดูรายละเอียด">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewDetails(request)}
-                      >
+                      <IconButton onClick={() => handleOpenDetail(req)}>
                         <Visibility />
                       </IconButton>
                     </Tooltip>
-                    {request.status === 'processing' && (
-                      <Tooltip title="สร้างบัญชี">
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleOpenCreateAccount(request)}
-                        >
-                          <CheckCircle />
-                        </IconButton>
-                      </Tooltip>
-                    )}
                     <Tooltip title="ลบคำขอ">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteRequest(request._id)}
-                      >
+                      <IconButton color="error" onClick={() => handleDelete(req._id)}>
                         <Delete />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Dialog รายละเอียดคำขอ */}
-      <Dialog open={detailDialog} onClose={() => setDetailDialog(false)} maxWidth="md" fullWidth>
+      {/* Dialog รายละเอียด */}
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>รายละเอียดคำขอลงทะเบียน</DialogTitle>
-        <DialogContent>
-          {selectedRequest && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="เบอร์โทรศัพท์"
-                  value={selectedRequest.phoneNumber}
-                  fullWidth
-                  disabled
+        <DialogContent dividers>
+          {selected && (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="subtitle2">เบอร์โทรศัพท์</Typography>
+                <Typography>{selected.phoneNumber}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">ชื่อ</Typography>
+                <Typography>{selected.displayName}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">รหัสผ่าน</Typography>
+                <Typography>{selected.password}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">Proxy</Typography>
+                <Typography>{selected.proxy || "-"}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">สถานะ</Typography>
+                <Chip
+                  label={getStatusText(selected.status)}
+                  color={getStatusColor(selected.status) as ChipProps["color"]}
+                  size="small"
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">หมายเหตุแอดมิน</Typography>
                 <TextField
-                  label="ชื่อแสดง"
-                  value={selectedRequest.displayName}
-                  fullWidth
-                  disabled
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="รหัสผ่าน"
-                  value={selectedRequest.password}
-                  fullWidth
-                  disabled
-                  type="password"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Proxy"
-                  value={selectedRequest.proxy || 'ไม่มี'}
-                  fullWidth
-                  disabled
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="สถานะ"
-                  value={getStatusText(selectedRequest.status)}
-                  fullWidth
-                  disabled
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="วันที่ขอ"
-                  value={new Date(selectedRequest.requestedAt).toLocaleString('th-TH')}
-                  fullWidth
-                  disabled
-                />
-              </Grid>
-              {selectedRequest.otpRequestedAt && (
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="วันที่ร้องขอ OTP"
-                    value={new Date(selectedRequest.otpRequestedAt).toLocaleString('th-TH')}
-                    fullWidth
-                    disabled
-                  />
-                </Grid>
-              )}
-              <Grid item xs={12}>
-                <TextField
-                  label="หมายเหตุของ Admin"
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
                   fullWidth
                   multiline
-                  rows={3}
-                  placeholder="เพิ่มหมายเหตุ..."
+                  minRows={2}
+                  maxRows={4}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">อัปเดตสถานะ</Typography>
+                <Select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as RegistrationRequest["status"])}
+                  fullWidth
+                >
+                  {statusOptions
+                    .filter((opt) => opt.value !== "all")
+                    .map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2">วันที่ขอ</Typography>
+                <Typography>{new Date(selected.requestedAt).toLocaleString()}</Typography>
+              </Box>
+              {selected.completedAt && (
+                <Box>
+                  <Typography variant="subtitle2">วันที่เสร็จ</Typography>
+                  <Typography>{new Date(selected.completedAt).toLocaleString()}</Typography>
+                </Box>
+              )}
+            </Stack>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailDialog(false)}>ปิด</Button>
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'processing')}
-          >
-            เปลี่ยนเป็น "กำลังดำเนินการ"
+          <Button onClick={() => setDetailOpen(false)}>ปิด</Button>
+          <Button onClick={handleUpdate} variant="contained" color="primary">
+            อัปเดตสถานะ/หมายเหตุ
           </Button>
           <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'awaiting_otp')}
-          >
-            เปลี่ยนเป็น "รอ OTP"
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'failed')}
-          >
-            เปลี่ยนเป็น "ล้มเหลว"
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog สร้างบัญชี */}
-      <Dialog open={createAccountDialog} onClose={() => setCreateAccountDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>สร้างบัญชี LINE</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                label="ชื่อแสดงจริง (จาก LINE)"
-                value={actualDisplayName}
-                onChange={(e) => setActualDisplayName(e.target.value)}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="รหัสผ่านจริง (จาก LINE)"
-                value={actualPassword}
-                onChange={(e) => setActualPassword(e.target.value)}
-                fullWidth
-                required
-                type="password"
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateAccountDialog(false)}>ยกเลิก</Button>
-          <Button
-            variant="contained"
             onClick={handleCreateAccount}
-            disabled={!actualDisplayName.trim() || !actualPassword.trim()}
+            variant="contained"
+            color="success"
+            disabled={createAccountLoading}
           >
-            สร้างบัญชี
+            {createAccountLoading ? <CircularProgress size={20} /> : "สร้างบัญชี"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar for messages */}
+      {/* Snackbar แจ้งเตือน */}
       <Snackbar
         open={!!message}
         autoHideDuration={3000}
         onClose={() => setMessage(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert severity={messageType} onClose={() => setMessage(null)}>
           {message}
