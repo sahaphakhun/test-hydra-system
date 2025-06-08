@@ -1,9 +1,9 @@
 import axios from 'axios';
 
+// Base URL ของ backend API ต้องกำหนดผ่าน env var NEXT_PUBLIC_API_URL
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
-
 if (!baseURL) {
-  console.warn('NEXT_PUBLIC_API_URL is not defined, axios will use relative URLs');
+  throw new Error('Environment variable NEXT_PUBLIC_API_URL ต้องกำหนดเป็น URL ของ backend API');
 }
 
 const api = axios.create({
