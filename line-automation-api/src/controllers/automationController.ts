@@ -4,6 +4,7 @@ import LineAccount from '../models/LineAccount';
 import { AutomationStatus, RegisterRequest, OtpRequest, CheckProxyRequest } from '../types';
 import axios from 'axios';
 import { URL } from 'url';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 // สำหรับเก็บ WebSocket server instance
 let wss: WebSocketServer;
@@ -117,13 +118,11 @@ export const checkProxy = async (req: Request, res: Response) => {
   if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
     return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง' });
   }
-  const host = urlObj.hostname;
-  const port = urlObj.port ? parseInt(urlObj.port, 10) : (urlObj.protocol === 'http:' ? 80 : 443);
-  const auth = urlObj.username ? { username: urlObj.username, password: urlObj.password } : undefined;
+  // ทดสอบการเช็ก proxy ผ่าน agent จริง
   try {
-    // ทดสอบเรียกใช้งานผ่าน proxy
+    const agent = new HttpsProxyAgent(proxy);
     await axios.get('https://api.ipify.org?format=json', {
-      proxy: { protocol: urlObj.protocol.replace(':', ''), host, port, auth },
+      httpsAgent: agent,
       timeout: 5000,
     });
     return res.status(200).json({ message: 'Proxy ใช้งานได้' });
