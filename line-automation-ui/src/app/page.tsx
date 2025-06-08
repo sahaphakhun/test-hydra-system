@@ -38,7 +38,7 @@ export default function HomePage() {
         setAccounts(JSON.parse(savedAccounts));
         // if there is account awaiting otp, open dialog automatically
         const parsed: Account[] = JSON.parse(savedAccounts);
-        const awaiting = parsed.find((acc) => acc.status === 'awaitingOtp');
+        const awaiting = parsed.find((acc) => acc.status === 'awaiting_otp');
         if (awaiting) {
           // อ่าน timestamp จาก localStorage หากมี เพื่อรักษา countdown
           let startTime: number | undefined;
@@ -80,17 +80,18 @@ export default function HomePage() {
         if (data.type === 'statusUpdate' && data.phoneNumber) {
           // บางกรณี backend อาจส่งสถานะในรูปแบบอื่น ๆ เช่น otpWait, otp_wait
           const rawStatus: string = data.status;
-          const normalizedStatus =
-            rawStatus === 'processing'
-              ? 'pending'
-              : rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
-              ? 'awaitingOtp'
+          rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
+              ? 'awaiting_otp'
+              : rawStatus === 'success'
+              ? 'completed'
+              : rawStatus === 'error'
+              ? 'failed'
               : (rawStatus as Account['status']);
 
           // อัปเดตสถานะใน state
           setAccounts(prev => prev.map(acc => acc.phoneNumber === data.phoneNumber ? { ...acc, status: normalizedStatus } : acc));
 
-          if (normalizedStatus === 'awaitingOtp') {
+          if (normalizedStatus === 'awaiting_otp') {
             const now = Date.now();
             // บันทึก timestamp เพื่อให้ reload คง countdown ต่อเนื่อง
             try { localStorage.setItem('otpWaitingData', JSON.stringify({ phoneNumber: data.phoneNumber, startTime: now })); } catch {}
@@ -99,7 +100,7 @@ export default function HomePage() {
             setWaitStartTime(null);
             setShowManualOtp(false);
             setShowRequestOtp(true); // แสดงปุ่มขอ OTP
-          } else if (['success', 'error', 'timeout'].includes(normalizedStatus)) {
+          } else if (['completed', 'failed', 'timeout'].includes(normalizedStatus)) {
             // ล้างข้อมูล waiting และ otpWaitingData เมื่อจบ
             setWaitingPhoneNumber(null);
             setWaitStartTime(null);
@@ -340,7 +341,7 @@ export default function HomePage() {
         onClose={closeOtpDialog}
       />
 
-      {/* Backdrop while waiting for awaitingOtp */}
+      {/* Backdrop while waiting for awaiting_otp */}
       <Backdrop open={waitingPhoneNumber !== null} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Box textAlign="center">
           <CircularProgress color="inherit" />

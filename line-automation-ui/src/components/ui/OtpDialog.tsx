@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 interface OtpDialogProps {
   open: boolean;
   phoneNumber: string;
-  startTime?: number; // timestamp เมื่อ backend ส่ง awaitingOtp
+  startTime?: number; // timestamp เมื่อ backend ส่ง awaiting_otp
   timeoutMs?: number; // default 5 min
   onSubmit: (otp: string) => Promise<void>;
   onClose: () => void;

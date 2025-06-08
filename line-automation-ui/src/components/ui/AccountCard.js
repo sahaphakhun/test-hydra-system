@@ -15,10 +15,10 @@ function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }) {
     const getStatusColor = (status) => {
         switch (status) {
             case 'active':
-            case 'success':
+            case 'completed':
                 return 'success';
             case 'pending':
-            case 'awaitingOtp':
+            case 'awaiting_otp':
             case 'timeout':
             case 'inactive':
                 return 'warning';
@@ -34,11 +34,11 @@ function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }) {
             case 'pending':
             case 'inactive':
                 return 'กำลังดำเนินการ';
-            case 'awaitingOtp':
+            case 'awaiting_otp':
                 return 'รอ OTP';
             case 'timeout':
                 return 'หมดเวลา OTP';
-            case 'error':
+            case 'failed':
                 return 'ผิดพลาด';
             default:
                 return 'กำลังดำเนินการ';
@@ -73,7 +73,7 @@ function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }) {
         </material_1.Typography>
 
         {/* ปุ่มสำหรับกรอก OTP เฉพาะเมื่อสถานะรอ OTP */}
-        {account.status === 'awaitingOtp' && (<material_1.Box mt={2}>
+        {account.status === 'awaiting_otp' && (<material_1.Box mt={2}>
             <material_1.Button variant="outlined" size="small" onClick={() => onEnterOtp === null || onEnterOtp === void 0 ? void 0 : onEnterOtp(account)}>
               กรอก OTP
             </material_1.Button>

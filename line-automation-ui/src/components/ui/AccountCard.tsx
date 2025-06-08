@@ -33,10 +33,11 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onR
   const getStatusColor = (status: Account['status']) => {
     switch (status) {
       case 'active':
-      case 'success':
+      case 'completed':
+      case 'active':
         return 'success';
       case 'pending':
-      case 'awaitingOtp':
+      case 'awaiting_otp':
       case 'timeout':
       case 'inactive':
         return 'warning';
@@ -48,16 +49,16 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onR
   const getStatusText = (status: Account['status']) => {
     switch (status) {
       case 'active':
-      case 'success':
+      case 'completed':
         return 'ใช้งานได้';
       case 'pending':
       case 'inactive':
         return 'กำลังดำเนินการ';
-      case 'awaitingOtp':
+      case 'awaiting_otp':
         return 'รอ OTP';
       case 'timeout':
         return 'หมดเวลา OTP';
-      case 'error':
+      case 'failed':
         return 'ผิดพลาด';
       default:
         return 'กำลังดำเนินการ';
@@ -101,7 +102,7 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp, onR
         </Typography>
 
         {/* ปุ่มสำหรับกรอก OTP เฉพาะเมื่อสถานะรอ OTP */}
-        {account.status === 'awaitingOtp' && (
+        {account.status === 'awaiting_otp' && (
           <Box mt={2}>
             <Button
               variant="outlined"
