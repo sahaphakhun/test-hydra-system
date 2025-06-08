@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { LineAccount } from '../models/LineAccount';
 import LineGroup from '../models/LineGroup';
 import PhoneNumberList from '../models/PhoneNumberList';
+import MessageRequest from '../models/MessageRequest';
+import { broadcastMessage } from '../websocket';
 
 export const getAllAccounts = async (req: Request, res: Response) => {
   try {
@@ -69,12 +71,27 @@ export const createGroup = async (req: Request, res: Response) => {
 
 export const sendMessageToGroup = async (req: Request, res: Response) => {
   try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ message: 'กรุณาระบุข้อความ' });
+    const { accountId, groupId, message } = req.body;
+
+    if (!accountId || !groupId || !message) {
+      return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้ส่งข้อความ
-    return res.status(200).json({ message: 'ส่งข้อความสำเร็จ', sent: true });
+
+    const requestEntry = new MessageRequest({ accountId, groupId, message });
+    await requestEntry.save();
+
+    broadcastMessage('STATUS_UPDATE', {
+      type: 'messageRequest',
+      requestId: requestEntry._id,
+      accountId,
+      groupId,
+      status: requestEntry.status,
+    });
+
+    return res.status(201).json({
+      message: 'ส่งข้อความสำเร็จ',
+      request: requestEntry,
+    });
   } catch (error) {
     console.error('Error in sendMessageToGroup:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการส่งข้อความ' });
