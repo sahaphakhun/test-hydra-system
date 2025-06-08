@@ -43,6 +43,7 @@ export const registerLine = async (req: Request, res: Response) => {
       autoLogout: autoLogout !== undefined ? autoLogout : true,
       status: 'pending',
     });
+    registrationRequest.status = 'processing';
     await registrationRequest.save();
     sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังสมัครบัญชี LINE...');
     setTimeout(() => {
