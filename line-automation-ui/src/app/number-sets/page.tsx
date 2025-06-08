@@ -1,7 +1,7 @@
 // 'use client' directive enables client-side React hooks
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -29,11 +29,54 @@ export default function NumberSetsPage() {
   const [groupSize, setGroupSize] = useState(100);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [sets, setSets] = useState<NumberSet[]>([]);
+
+  useEffect(() => {
+    const fetchSets = async () => {
+      try {
+        const res = await api.get('/phone-lists');
+        const lists: NumberSet[] = res.data.map((l: any) => ({
+          id: l._id,
+          name: l.name,
+          inputType: l.inputType,
+          rawData: l.rawData,
+          chunks: l.chunks,
+          createdAt: l.createdAt,
+        }));
+        setSets(lists);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchSets();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     setFile(f);
     setFileName(f?.name || '');
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/phone-lists/${id}`);
+      setSets(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDownload = (set: NumberSet) => {
+    const numbers = set.chunks.flat().join('\n');
+    const blob = new Blob([numbers], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${set.name}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSubmit = async () => {
@@ -97,9 +140,16 @@ export default function NumberSetsPage() {
         createdAt: new Date().toISOString(),
       };
       await api.post('/number-sets', newSet);
-      const existingRaw = localStorage.getItem('number-sets');
-      const existing: NumberSet[] = existingRaw ? JSON.parse(existingRaw) : [];
-      localStorage.setItem('number-sets', JSON.stringify([...existing, newSet]));
+      const res = await api.get('/phone-lists');
+      const lists: NumberSet[] = res.data.map((l: any) => ({
+        id: l._id,
+        name: l.name,
+        inputType: l.inputType,
+        rawData: l.rawData,
+        chunks: l.chunks,
+        createdAt: l.createdAt,
+      }));
+      setSets(lists);
       setMessage('สร้างชุดเบอร์สำเร็จ');
       setMessageType('success');
       // clear form
@@ -182,6 +232,23 @@ export default function NumberSetsPage() {
           {loading ? 'กำลังบันทึก...' : 'ดำเนินการต่อ'}
         </Button>
       </Stack>
+
+      {sets.length > 0 && (
+        <Box mt={4}>
+          <Typography variant="h5" gutterBottom>
+            รายการชุดเบอร์
+          </Typography>
+          {sets.map(set => (
+            <Box key={set.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Typography>{set.name}</Typography>
+              <Box>
+                <Button size="small" onClick={() => handleDownload(set)}>ดาวน์โหลด</Button>
+                <Button size="small" color="error" onClick={() => handleDelete(set.id)}>ลบ</Button>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      )}
 
       <Snackbar
         open={!!message}
