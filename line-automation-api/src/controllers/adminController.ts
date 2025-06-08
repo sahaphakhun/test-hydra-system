@@ -44,6 +44,11 @@ export const updateRegistrationRequestStatus = async (req: Request, res: Respons
       requestEntry.completedAt = new Date();
     }
     await requestEntry.save();
+    broadcastMessage('STATUS_UPDATE', {
+      message: `Registration request ${requestEntry._id} status updated`,
+      requestId: requestEntry._id,
+      status: requestEntry.status,
+    });
     return res.status(200).json({ message: 'อัปเดตสถานะสำเร็จ', request: requestEntry });
   } catch (error) {
     console.error('Error updating registration request status:', error);
@@ -74,6 +79,11 @@ export const createAccountFromRequest = async (req: Request, res: Response) => {
     requestEntry.status = 'completed';
     requestEntry.completedAt = new Date();
     await requestEntry.save();
+    broadcastMessage('STATUS_UPDATE', {
+      message: `Account created for request ${requestEntry._id}`,
+      requestId: requestEntry._id,
+      status: requestEntry.status,
+    });
     return res.status(201).json({ message: 'สร้างบัญชีสำเร็จ', account: newAccount, request: requestEntry });
   } catch (error) {
     console.error('Error creating account from request:', error);
