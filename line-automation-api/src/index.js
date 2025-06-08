@@ -65,7 +65,7 @@ wss.on('connection', (ws, req) => {
 });
 // เชื่อมต่อกับ MongoDB
 mongoose_1.default
-    .connect(config_1.DB_CONFIG.MONGODB_URI)
+    .connect(config_1.DB_CONFIG.MONGO_URL)
     .then(() => {
     console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
     // เริ่ม HTTP Server โดยใช้พอร์ตจาก SERVER_CONFIG

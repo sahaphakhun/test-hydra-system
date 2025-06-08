@@ -9,11 +9,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const material_1 = require("@mui/material");
 const icons_material_1 = require("@mui/icons-material");
 const react_1 = require("react");
-const api_1 = require("@/lib/api");
+const api_1 = __importDefault(require("@/lib/api"));
 function CreateAccountDialog({ open, onClose, onSubmit }) {
     var _a;
     const [formData, setFormData] = (0, react_1.useState)({
@@ -21,6 +24,7 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
         phoneNumber: '',
         password: '',
         proxy: '',
+        autoLogout: true,
     });
     const [loading, setLoading] = (0, react_1.useState)(false);
     const [proxyStatus, setProxyStatus] = (0, react_1.useState)('idle');
@@ -32,58 +36,69 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
         }
     };
     const checkProxy = () => __awaiter(this, void 0, void 0, function* () {
-        var _b;
-        if (!((_b = formData.proxy) === null || _b === void 0 ? void 0 : _b.trim()))
+        var _b, _c, _d, _e;
+        const proxy = (_b = formData.proxy) === null || _b === void 0 ? void 0 : _b.trim();
+        if (!proxy)
             return;
-        
         // รีเซ็ตข้อความแสดงข้อผิดพลาด
         setProxyErrorMessage('');
-        
-        // ตรวจสอบรูปแบบเบื้องต้น (เติม http:// หากผู้ใช้ไม่ใส่)
-        const rawProxy = formData.proxy.trim();
-        const testUrl = rawProxy.startsWith('http://') || rawProxy.startsWith('https://') ? rawProxy : `http://${rawProxy}`;
+        // ตรวจสอบรูปแบบเบื้องต้น
         try {
-            new URL(testUrl);
-        } catch (error) {
+            const url = new URL(proxy);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                setProxyStatus('invalid');
+                setProxyErrorMessage('โปรโตคอลต้องเป็น http หรือ https เท่านั้น');
+                return;
+            }
+        }
+        catch (_f) {
             setProxyStatus('invalid');
             setProxyErrorMessage('รูปแบบ Proxy ไม่ถูกต้อง');
             return;
         }
-        
         setProxyStatus('checking');
         try {
-            // เรียกใช้ API จริงเพื่อตรวจสอบ Proxy ผ่าน Hydra API
-            const sanitizedProxy = formData.proxy.trim().replace(/^https?:\/\//, '');
-            const response = yield api_1.default.post('/automation/test-proxy', { proxy: sanitizedProxy });
-            if (response.data?.success) {
+            // เรียก API เพื่อเช็ก proxy
+            const response = yield api_1.default.post('/automation/check-proxy', { proxy });
+            if (response.status === 200) {
                 setProxyStatus('valid');
-            } else {
-                setProxyStatus('invalid');
-                setProxyErrorMessage(response.data?.message || 'ไม่สามารถใช้งาน Proxy นี้ได้');
             }
-        } catch (error) {
+            else {
+                // กรณีที่ API ตอบกลับมา แต่ไม่ใช่ status 200
+                setProxyStatus('invalid');
+                setProxyErrorMessage(((_c = response.data) === null || _c === void 0 ? void 0 : _c.message) || 'ไม่สามารถใช้งาน Proxy นี้ได้');
+            }
+        }
+        catch (error) {
             console.error('Check proxy failed:', error);
             setProxyStatus('invalid');
-            
             // จัดการข้อความแสดงข้อผิดพลาด
-            if (error.response && error.response.data && error.response.data.message) {
-                setProxyErrorMessage(error.response.data.message);
-            } else if (error.message) {
-                setProxyErrorMessage(`เกิดข้อผิดพลาด: ${error.message}`);
-            } else {
+            if (typeof error === 'object' && error !== null) {
+                const errorObj = error;
+                if ((_e = (_d = errorObj.response) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.message) {
+                    setProxyErrorMessage(errorObj.response.data.message);
+                }
+                else if (errorObj.message) {
+                    setProxyErrorMessage(`เกิดข้อผิดพลาด: ${errorObj.message}`);
+                }
+                else {
+                    setProxyErrorMessage('ไม่สามารถเชื่อมต่อกับ API เพื่อตรวจสอบ Proxy');
+                }
+            }
+            else {
                 setProxyErrorMessage('ไม่สามารถเชื่อมต่อกับ API เพื่อตรวจสอบ Proxy');
             }
         }
     });
     const handleSubmit = () => __awaiter(this, void 0, void 0, function* () {
-        var _d;
+        var _g;
         if (!formData.name.trim() || !formData.phoneNumber.trim() || !formData.password.trim()) {
             return;
         }
         setLoading(true);
         try {
-            yield onSubmit(Object.assign(Object.assign({}, formData), { proxy: ((_d = formData.proxy) === null || _d === void 0 ? void 0 : _d.trim()) || undefined }));
-            setFormData({ name: '', phoneNumber: '', password: '', proxy: '' });
+            yield onSubmit(Object.assign(Object.assign({}, formData), { proxy: ((_g = formData.proxy) === null || _g === void 0 ? void 0 : _g.trim()) || undefined }));
+            setFormData({ name: '', phoneNumber: '', password: '', proxy: '', autoLogout: true });
             setProxyStatus('idle');
             onClose();
         }
@@ -96,7 +111,7 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
     });
     const handleClose = () => {
         if (!loading) {
-            setFormData({ name: '', phoneNumber: '', password: '', proxy: '' });
+            setFormData({ name: '', phoneNumber: '', password: '', proxy: '', autoLogout: true });
             setProxyStatus('idle');
             onClose();
         }
@@ -141,10 +156,11 @@ function CreateAccountDialog({ open, onClose, onSubmit }) {
               </material_1.Button>
               {proxyStatus === 'valid' && (<material_1.Alert severity="success" sx={{ py: 0 }}>Proxy ใช้งานได้</material_1.Alert>)}
               {proxyStatus === 'invalid' && (<material_1.Alert severity="error" sx={{ py: 0 }}>
-                {proxyErrorMessage || 'Proxy ใช้งานไม่ได้'}
-              </material_1.Alert>)}
+                  {proxyErrorMessage || 'Proxy ใช้งานไม่ได้'}
+                </material_1.Alert>)}
             </material_1.Box>
           </material_1.Box>
+          <material_1.FormControlLabel control={<material_1.Switch checked={formData.autoLogout} onChange={(e) => setFormData(prev => (Object.assign(Object.assign({}, prev), { autoLogout: e.target.checked })))} disabled={loading} color="primary"/>} label="Logout อัตโนมัติหลังกระบวนการ"/>
         </material_1.Stack>
       </material_1.DialogContent>
 

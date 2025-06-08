@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const material_1 = require("@mui/material");
 const icons_material_1 = require("@mui/icons-material");
 const react_1 = require("react");
-function AccountCard({ account, onEdit, onDelete, onRetry }) {
+function AccountCard({ account, onEdit, onDelete, onEnterOtp, onRetry }) {
     const [anchorEl, setAnchorEl] = (0, react_1.useState)(null);
     const handleMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
@@ -15,21 +15,33 @@ function AccountCard({ account, onEdit, onDelete, onRetry }) {
     const getStatusColor = (status) => {
         switch (status) {
             case 'active':
+            case 'success':
                 return 'success';
             case 'pending':
+            case 'awaitingOtp':
+            case 'timeout':
+            case 'inactive':
                 return 'warning';
             default:
-                return 'error';
+                return 'warning';
         }
     };
     const getStatusText = (status) => {
         switch (status) {
             case 'active':
+            case 'success':
                 return 'ใช้งานได้';
             case 'pending':
-                return 'รอยืนยัน';
+            case 'inactive':
+                return 'กำลังดำเนินการ';
+            case 'awaitingOtp':
+                return 'รอ OTP';
+            case 'timeout':
+                return 'หมดเวลา OTP';
+            case 'error':
+                return 'ผิดพลาด';
             default:
-                return 'ไม่ได้ใช้งาน';
+                return 'กำลังดำเนินการ';
         }
     };
     return (<material_1.Card sx={{ height: '100%', position: 'relative' }}>
@@ -59,6 +71,13 @@ function AccountCard({ account, onEdit, onDelete, onRetry }) {
         <material_1.Typography variant="caption" display="block" color="text.secondary" mt={1}>
           สร้างเมื่อ: {new Date(account.createdAt).toLocaleDateString('th-TH')}
         </material_1.Typography>
+
+        {/* ปุ่มสำหรับกรอก OTP เฉพาะเมื่อสถานะรอ OTP */}
+        {account.status === 'awaitingOtp' && (<material_1.Box mt={2}>
+            <material_1.Button variant="outlined" size="small" onClick={() => onEnterOtp === null || onEnterOtp === void 0 ? void 0 : onEnterOtp(account)}>
+              กรอก OTP
+            </material_1.Button>
+          </material_1.Box>)}
       </material_1.CardContent>
 
       <material_1.Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
@@ -68,11 +87,9 @@ function AccountCard({ account, onEdit, onDelete, onRetry }) {
         <material_1.MenuItem onClick={() => { onDelete === null || onDelete === void 0 ? void 0 : onDelete(account.id); handleMenuClose(); }} sx={{ color: 'error.main' }}>
           ลบ
         </material_1.MenuItem>
-        {(account.status === 'error' || account.status === 'timeout') && (
-          <material_1.MenuItem onClick={() => { onRetry === null || onRetry === void 0 ? void 0 : onRetry(account); handleMenuClose(); }}>
+        {(account.status === 'error' || account.status === 'timeout') && (<material_1.MenuItem onClick={() => { onRetry === null || onRetry === void 0 ? void 0 : onRetry(account); handleMenuClose(); }}>
             ลองสมัครใหม่
-          </material_1.MenuItem>
-        )}
+          </material_1.MenuItem>)}
       </material_1.Menu>
     </material_1.Card>);
 }

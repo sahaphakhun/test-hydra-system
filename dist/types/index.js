@@ -5,7 +5,7 @@ exports.AutomationStatus = void 0;
 var AutomationStatus;
 (function (AutomationStatus) {
     AutomationStatus["IDLE"] = "idle";
-    AutomationStatus["AWAITING_OTP"] = "awaitingOtp";
+    AutomationStatus["WAITING_OTP"] = "waiting_otp";
     AutomationStatus["PROCESSING"] = "processing";
     AutomationStatus["SUCCESS"] = "success";
     AutomationStatus["ERROR"] = "error";

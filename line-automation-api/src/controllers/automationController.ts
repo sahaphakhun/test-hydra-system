@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import LineAccount from '../models/LineAccount';
+import RegistrationRequest from '../models/RegistrationRequest';
 import { AutomationStatus, RegisterRequest, OtpRequest, CheckProxyRequest } from '../types';
 import axios from 'axios';
 import { URL } from 'url';
@@ -26,7 +27,7 @@ export const testConnection = (req: Request, res: Response) => {
 export const registerLine = async (req: Request, res: Response) => {
   console.log('▶️ registerLine called, body:', req.body);
   try {
-    const { phoneNumber, displayName, password, proxy }: RegisterRequest = req.body;
+    const { phoneNumber, displayName, password, proxy, autoLogout }: RegisterRequest = req.body;
 
     // ตรวจสอบว่ามีการกรอกข้อมูลที่จำเป็นครบถ้วนหรือไม่
     if (!phoneNumber || !displayName || !password) {
@@ -39,23 +40,84 @@ export const registerLine = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'เบอร์โทรศัพท์นี้มีในระบบแล้ว' });
     }
 
-    // จำลองการเริ่มกระบวนการลงทะเบียน
-    // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner
-    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังเริ่มกระบวนการลงทะเบียน...');
+    // ตรวจสอบว่าเบอร์โทรศัพท์นี้มีคำขอที่รอดำเนินการแล้วหรือยัง
+    const existingRequest = await RegistrationRequest.findOne({ 
+      phoneNumber, 
+      status: { $in: ['pending', 'processing', 'awaiting_otp'] }
+    });
+    if (existingRequest) {
+      return res.status(400).json({ message: 'เบอร์โทรศัพท์นี้มีคำขอที่รอดำเนินการอยู่แล้ว' });
+    }
+
+    // บันทึกคำขอลงทะเบียนใหม่
+    const registrationRequest = new RegistrationRequest({
+      phoneNumber,
+      displayName,
+      password,
+      proxy,
+      autoLogout: autoLogout !== undefined ? autoLogout : true,
+      status: 'pending'
+    });
+
+    await registrationRequest.save();
+
+    // ส่งสถานะให้ผู้ใช้ทราบว่า "กำลังสมัคร"
+    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังสมัครบัญชี LINE...');
     
-    // หน่วงเวลาเพื่อจำลองการทำงาน
+    // หน่วงเวลาเล็กน้อยแล้วส่งสถานะให้รอ OTP
     setTimeout(() => {
       sendStatusUpdate(
         phoneNumber,
         AutomationStatus.AWAITING_OTP,
-        'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS'
+        'กรุณากดปุ่มขอ OTP และกรอกรหัสที่ได้รับ'
       );
     }, 2000);
 
-    return res.status(202).json({ message: 'Automation process started.' });
+    return res.status(202).json({ 
+      message: 'รับคำขอลงทะเบียนเรียบร้อยแล้ว กำลังสมัครบัญชี LINE สำหรับคุณ',
+      requestId: registrationRequest._id 
+    });
   } catch (error) {
     console.error('Error in registerLine:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการเริ่มกระบวนการลงทะเบียน' });
+  }
+};
+
+// ฟังก์ชันสำหรับผู้ใช้ร้องขอ OTP
+export const requestOtp = async (req: Request, res: Response) => {
+  console.log('▶️ requestOtp called, body:', req.body);
+  try {
+    const { phoneNumber } = req.body;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({ message: 'กรุณาระบุเบอร์โทรศัพท์' });
+    }
+    
+    // ค้นหาคำขอลงทะเบียน
+    const request = await RegistrationRequest.findOne({ 
+      phoneNumber, 
+      status: { $in: ['pending', 'processing', 'awaiting_otp'] }
+    });
+    
+    if (!request) {
+      return res.status(404).json({ message: 'ไม่พบคำขอลงทะเบียนสำหรับเบอร์นี้' });
+    }
+    
+    // บันทึกว่าผู้ใช้ร้องขอ OTP แล้ว
+    request.otpRequested = true;
+    request.otpRequestedAt = new Date();
+    request.status = 'awaiting_otp';
+    await request.save();
+    
+    // ส่งสถานะแจ้งให้ทราบ
+    sendStatusUpdate(phoneNumber, AutomationStatus.AWAITING_OTP, 'ได้ร้องขอ OTP แล้ว กรุณารอรับ SMS และกรอกรหัส OTP');
+    
+    return res.status(200).json({ 
+      message: 'ร้องขอ OTP เรียบร้อยแล้ว กรุณารอรับ SMS และกรอกรหัส OTP' 
+    });
+  } catch (error) {
+    console.error('Error in requestOtp:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการร้องขอ OTP' });
   }
 };
 
@@ -69,33 +131,34 @@ export const submitOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'กรุณากรอกรหัส OTP' });
     }
     
-    // บันทึกค่า OTP ที่ได้รับ
-    currentOtp = otp;
+    // ค้นหาคำขอลงทะเบียน
+    const request = await RegistrationRequest.findOne({ 
+      phoneNumber, 
+      status: 'awaiting_otp'
+    });
     
-    // จำลองกระบวนการตรวจสอบ OTP
-    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'กำลังตรวจสอบรหัส OTP...');
+    if (!request) {
+      return res.status(404).json({ message: 'ไม่พบคำขอลงทะเบียนที่รอ OTP สำหรับเบอร์นี้' });
+    }
+    
+    // ส่งสถานะว่ากำลังตรวจสอบ OTP
+    sendStatusUpdate(phoneNumber, AutomationStatus.PROCESSING, 'ได้รับรหัส OTP แล้ว กำลังดำเนินการสมัครบัญชี...');
+    
+    // อัปเดตสถานะเป็น processing
+    request.status = 'processing';
+    await request.save();
     
     // หน่วงเวลาเพื่อจำลองการทำงาน
     setTimeout(() => {
-      // สร้างบัญชีใหม่ (ในสถานการณ์จริงจะมีการตรวจสอบกับ LINE ก่อน และใช้ข้อมูลจริง)
-      const newAccount = new LineAccount({
-        phoneNumber,
-        displayName: 'LINE User', // ในกรณีจริงควรได้จากผลลัพธ์ Automation
-        password: 'password123', // เช่นเดียวกันควรใช้รหัสจริงที่สร้างไว้
-        status: 'active',
-      });
-      
-      newAccount.save();
-      
       sendStatusUpdate(
-        newAccount.phoneNumber,
+        phoneNumber,
         AutomationStatus.SUCCESS,
-        'ลงทะเบียนสำเร็จ',
-        { accountId: newAccount._id }
+        'ข้อมูลของคุณถูกส่งไปยังทีมงานเรียบร้อยแล้ว เรากำลังดำเนินการสมัครบัญชีให้คุณ',
+        { requestId: request._id }
       );
-    }, 2000);
+    }, 3000);
     
-    return res.status(200).json({ phoneNumber, message: 'OTP received and saved.' });
+    return res.status(200).json({ phoneNumber, message: 'ได้รับรหัส OTP เรียบร้อยแล้ว ทีมงานกำลังดำเนินการสมัครบัญชีให้คุณ' });
   } catch (error) {
     console.error('Error in submitOtp:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกรหัส OTP' });

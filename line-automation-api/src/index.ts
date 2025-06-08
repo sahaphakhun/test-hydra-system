@@ -73,7 +73,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
 
 // เชื่อมต่อกับ MongoDB
 mongoose
-  .connect(DB_CONFIG.MONGODB_URI)
+  .connect(DB_CONFIG.MONGO_URL)
   .then(() => {
     console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
     

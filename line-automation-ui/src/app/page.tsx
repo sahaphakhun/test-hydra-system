@@ -28,6 +28,7 @@ export default function HomePage() {
   const [waitingPhoneNumber, setWaitingPhoneNumber] = useState<string | null>(null);
   const [waitStartTime, setWaitStartTime] = useState<number | null>(null);
   const [showManualOtp, setShowManualOtp] = useState(false);
+  const [showRequestOtp, setShowRequestOtp] = useState(false);
 
   // โหลดข้อมูลบัญชีจาก localStorage เมื่อเริ่มต้น
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function HomePage() {
           const normalizedStatus =
             rawStatus === 'processing'
               ? 'pending'
-              : rawStatus === 'otpWait' || rawStatus === 'otp_wait'
+              : rawStatus === 'otpWait' || rawStatus === 'otp_wait' || rawStatus === 'waiting_otp'
               ? 'awaitingOtp'
               : (rawStatus as Account['status']);
 
@@ -97,11 +98,13 @@ export default function HomePage() {
             setWaitingPhoneNumber(null);
             setWaitStartTime(null);
             setShowManualOtp(false);
+            setShowRequestOtp(true); // แสดงปุ่มขอ OTP
           } else if (['success', 'error', 'timeout'].includes(normalizedStatus)) {
             // ล้างข้อมูล waiting และ otpWaitingData เมื่อจบ
             setWaitingPhoneNumber(null);
             setWaitStartTime(null);
             setShowManualOtp(false);
+            setShowRequestOtp(false);
             try { localStorage.removeItem('otpWaitingData'); } catch {}
           }
 
@@ -239,6 +242,22 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [waitingPhoneNumber, waitStartTime]);
 
+  // ฟังก์ชันสำหรับขอ OTP
+  const handleRequestOtp = async (phoneNumber: string) => {
+    try {
+      await api.post('/automation/request-otp', {
+        phoneNumber: phoneNumber,
+      });
+      setMessage('ร้องขอ OTP เรียบร้อยแล้ว กรุณารอรับ SMS');
+      setMessageType('success');
+      setShowRequestOtp(false);
+    } catch (error) {
+      console.error('Failed to request OTP:', error);
+      setMessage('เกิดข้อผิดพลาดในการร้องขอ OTP');
+      setMessageType('error');
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box mb={4}>
@@ -326,8 +345,17 @@ export default function HomePage() {
         <Box textAlign="center">
           <CircularProgress color="inherit" />
           <Typography variant="h6" mt={2}>
-            กำลังรอ OTP สำหรับ {waitingPhoneNumber}
+            กำลังสมัครบัญชี LINE สำหรับ {waitingPhoneNumber}
           </Typography>
+          {showRequestOtp && waitingPhoneNumber && (
+            <Button
+              variant="outlined"
+              sx={{ mt: 2, mr: 2, color: '#fff', borderColor: '#fff' }}
+              onClick={() => handleRequestOtp(waitingPhoneNumber)}
+            >
+              ขอ OTP
+            </Button>
+          )}
           {showManualOtp && (
             <Button
               variant="outlined"

@@ -4,9 +4,10 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { WebSocketServer } from 'ws';
 import { SERVER_CONFIG, DB_CONFIG } from './config';
-import automationRoutes from './routes/automationRoutes';
-import accountRoutes from './routes/accountRoutes';
-import { setWebSocketServer } from './controllers/automationController';
+import automationRoutes from '../line-automation-api/src/routes/automationRoutes';
+import accountRoutes from '../line-automation-api/src/routes/accountRoutes';
+import adminRoutes from '../line-automation-api/src/routes/adminRoutes';
+import { setWebSocketServer } from '../line-automation-api/src/controllers/automationController';
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,7 @@ app.use(express.json());
 // Routes
 app.use('/', automationRoutes);
 app.use('/', accountRoutes);
+app.use('/', adminRoutes);
 
 // Type assertion เพื่อแก้ปัญหา TypeScript
 interface ExtendedWebSocket extends WebSocket {
@@ -84,7 +86,7 @@ wss.on('connection', function connection(ws, req) {
 
 // เชื่อมต่อกับ MongoDB
 mongoose
-  .connect(DB_CONFIG.MONGODB_URI)
+  .connect(DB_CONFIG.MONGO_URL)
   .then(() => {
     console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
     

@@ -30,7 +30,9 @@ const WebSocketContext = (0, react_1.createContext)({
     send: () => { },
     isConnected: false,
 });
-const WS_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL;
+const RAW_ENDPOINT = process.env.NEXT_PUBLIC_WS_URL;
+// แปลง http://, https:// ไปเป็น ws://, wss:// ตามลำดับ หากผู้ใช้ตั้งค่าผิด
+const WS_ENDPOINT = RAW_ENDPOINT === null || RAW_ENDPOINT === void 0 ? void 0 : RAW_ENDPOINT.replace(/^http/, 'ws');
 function WebSocketProvider({ children }) {
     const socketRef = (0, react_1.useRef)(null);
     const [isConnected, setIsConnected] = (0, react_1.useState)(false);

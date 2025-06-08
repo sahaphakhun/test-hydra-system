@@ -12,7 +12,7 @@ export const SERVER_CONFIG = {
 
 // การตั้งค่าสำหรับฐานข้อมูล
 export const DB_CONFIG = {
-  MONGODB_URI: process.env.MONGO_URL || 'mongodb://localhost:27017/line-automation',
+  MONGO_URL: process.env.MONGO_URL || 'mongodb://localhost:27017/line-automation',
 };
 
 // การตั้งค่าสำหรับ Socket.IO
