@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Typography, TextField, Button, Stack, Snackbar, Alert } from '@mui/material';
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Stack,
+  Snackbar,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
 import api from '@/lib/api';
 
 export default function SendMessagePage() {
@@ -10,6 +22,10 @@ export default function SendMessagePage() {
   const [success, setSuccess] = useState<boolean | string>(false);
   const [jobId, setJobId] = useState('');
   const [jobStatus, setJobStatus] = useState('');
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState('');
+  const [groups, setGroups] = useState<any[]>([]);
+  const [groupId, setGroupId] = useState('');
 
   useEffect(() => {
     if (!jobId) return;
@@ -27,13 +43,35 @@ export default function SendMessagePage() {
     return () => ws.close();
   }, [jobId]);
 
+  // โหลดรายการบัญชี
+  useEffect(() => {
+    api
+      .get('/accounts')
+      .then((res) => setAccounts(res.data))
+      .catch(() => {});
+  }, []);
+
+  // โหลดกลุ่มเมื่อเลือกบัญชี
+  useEffect(() => {
+    if (!accountId) {
+      setGroups([]);
+      setGroupId('');
+      return;
+    }
+    api
+      .get(`/accounts/${accountId}/groups`)
+      .then((res) => setGroups(res.data))
+      .catch(() => setGroups([]));
+  }, [accountId]);
+
   const handleSubmit = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !accountId || !groupId) return;
     setLoading(true);
     try {
-      const res = await api.post('/send-message', { message });
+      const res = await api.post('/send-message', { accountId, groupId, message });
       setSuccess('ส่งข้อความสำเร็จ');
       setMessage('');
+      setGroupId('');
       if (res.data.jobId) setJobId(res.data.jobId);
     } catch {
       setSuccess('เกิดข้อผิดพลาด');
@@ -49,6 +87,34 @@ export default function SendMessagePage() {
       </Typography>
 
       <Stack spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel>บัญชี</InputLabel>
+          <Select
+            value={accountId}
+            label="บัญชี"
+            onChange={(e) => setAccountId(e.target.value)}
+          >
+            {accounts.map((acc) => (
+              <MenuItem key={acc._id} value={acc._id}>
+                {acc.displayName || acc.phoneNumber || acc._id}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth disabled={!accountId}>
+          <InputLabel>กลุ่ม</InputLabel>
+          <Select
+            value={groupId}
+            label="กลุ่ม"
+            onChange={(e) => setGroupId(e.target.value)}
+          >
+            {groups.map((g) => (
+              <MenuItem key={g._id} value={g._id}>
+                {g.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <TextField
           label="ข้อความ"
           value={message}

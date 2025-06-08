@@ -89,14 +89,32 @@ export const createGroup = async (req: Request, res: Response) => {
 
 export const sendMessageToGroup = async (req: Request, res: Response) => {
   try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ message: 'กรุณาระบุข้อความ' });
+    const { accountId, groupId, message } = req.body as {
+      accountId?: string;
+      groupId?: string;
+      message?: string;
+    };
+
+    if (!accountId || !groupId || !message) {
+      return res.status(400).json({ message: 'กรุณาระบุ accountId, groupId และข้อความ' });
     }
-    const job = await createJob('send_message', undefined, { message });
+
+    const account = await LineAccount.findById(accountId);
+    if (!account) {
+      return res.status(404).json({ message: 'ไม่พบบัญชีที่ระบุ' });
+    }
+
+    const group = await LineGroup.findOne({ _id: groupId, accountId });
+    if (!group) {
+      return res.status(404).json({ message: 'ไม่พบกลุ่มที่ระบุ' });
+    }
+
+    const job = await createJob('send_message', accountId, { groupId, message });
     // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้ส่งข้อความ
     await updateJobStatus(job, 'completed');
-    return res.status(200).json({ message: 'ส่งข้อความสำเร็จ', sent: true, jobId: job._id });
+    return res
+      .status(200)
+      .json({ message: 'ส่งข้อความสำเร็จ', sent: true, jobId: job._id });
   } catch (error) {
     console.error('Error in sendMessageToGroup:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการส่งข้อความ' });
