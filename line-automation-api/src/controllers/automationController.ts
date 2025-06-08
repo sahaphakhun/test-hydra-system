@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import LineAccount from '../models/LineAccount';
-import { AutomationStatus, RegisterRequest, OtpRequest } from '../types';
+import { AutomationStatus, RegisterRequest, OtpRequest, CheckProxyRequest } from '../types';
+import axios from 'axios';
+import { URL } from 'url';
 
 // สำหรับเก็บ WebSocket server instance
 let wss: WebSocketServer;
@@ -96,6 +98,38 @@ export const submitOtp = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error in submitOtp:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกรหัส OTP' });
+  }
+};
+
+// เช็ก Proxy ว่าถูกต้องและใช้งานได้
+export const checkProxy = async (req: Request, res: Response) => {
+  console.log('▶️ checkProxy called, body:', req.body);
+  const { proxy }: CheckProxyRequest = req.body;
+  if (!proxy) {
+    return res.status(400).json({ message: 'กรุณากรอก Proxy' });
+  }
+  let urlObj;
+  try {
+    urlObj = new URL(proxy);
+  } catch {
+    return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง' });
+  }
+  if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+    return res.status(400).json({ message: 'รูปแบบ Proxy ไม่ถูกต้อง' });
+  }
+  const host = urlObj.hostname;
+  const port = urlObj.port ? parseInt(urlObj.port, 10) : (urlObj.protocol === 'http:' ? 80 : 443);
+  const auth = urlObj.username ? { username: urlObj.username, password: urlObj.password } : undefined;
+  try {
+    // ทดสอบเรียกใช้งานผ่าน proxy
+    await axios.get('https://api.ipify.org?format=json', {
+      proxy: { protocol: urlObj.protocol.replace(':', ''), host, port, auth },
+      timeout: 5000,
+    });
+    return res.status(200).json({ message: 'Proxy ใช้งานได้' });
+  } catch (error) {
+    console.error('Proxy check error:', error);
+    return res.status(400).json({ message: 'ไม่สามารถใช้งาน Proxy นี้ได้' });
   }
 };
 

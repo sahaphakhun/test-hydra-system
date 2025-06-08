@@ -62,6 +62,11 @@ export interface OtpRequest {
   otp: string;
 }
 
+// ประเภทข้อมูลคำขอเช็ก Proxy
+export interface CheckProxyRequest {
+  proxy: string;
+}
+
 // ประเภทข้อมูลคำขอเพิ่มเพื่อน
 export interface AddFriendsRequest {
   accountId: string;

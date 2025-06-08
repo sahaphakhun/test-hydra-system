@@ -17,6 +17,7 @@ import {
 import { Close, CheckCircle, Error } from '@mui/icons-material';
 import { useState } from 'react';
 import { CreateAccountData } from '@/types/account';
+import api from '@/lib/api';
 
 interface CreateAccountDialogProps {
   open: boolean;
@@ -45,14 +46,27 @@ export default function CreateAccountDialog({ open, onClose, onSubmit }: CreateA
   };
 
   const checkProxy = async () => {
-    if (!formData.proxy?.trim()) return;
-    
+    const proxy = formData.proxy?.trim();
+    if (!proxy) return;
+    // ตรวจสอบรูปแบบเบื้องต้น
+    try {
+      const url = new URL(proxy);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        setProxyStatus('invalid');
+        return;
+      }
+    } catch {
+      setProxyStatus('invalid');
+      return;
+    }
+
     setProxyStatus('checking');
     try {
-      // จำลองการเช็ก proxy (ในความเป็นจริงจะเรียก API)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // เรียก API เพื่อเช็ก proxy
+      await api.post('/automation/check-proxy', { proxy });
       setProxyStatus('valid');
-    } catch {
+    } catch (error) {
+      console.error('Check proxy failed:', error);
       setProxyStatus('invalid');
     }
   };
