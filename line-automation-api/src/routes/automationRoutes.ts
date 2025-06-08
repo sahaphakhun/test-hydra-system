@@ -11,7 +11,6 @@ router.get('/', automationController.testConnection);
 router.post('/automation/register', automationController.registerLine);
 router.post('/automation/request-otp', automationController.requestOtp);
 router.post('/automation/submit-otp', automationController.submitOtp);
-router.post('/automation/check-proxy', automationController.checkProxy);
 router.post('/automation/status', automationController.receiveStatus);
 router.post('/logout', automationController.logout);
 
