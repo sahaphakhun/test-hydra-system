@@ -43,8 +43,4 @@ router.post('/send-message', accountController.sendMessageToGroup);
 router.get('/phone-lists', accountController.getPhoneNumberLists);
 router.post('/number-sets', accountController.createPhoneNumberList);
 router.delete('/phone-lists/:id', accountController.deletePhoneNumberList);
-// การจัดการงาน (Jobs)
-router.get('/jobs', accountController.getJobs);
-router.get('/jobs/:id', accountController.getJobById);
-router.put('/jobs/:id/status', accountController.updateJobStatus);
 exports.default = router;

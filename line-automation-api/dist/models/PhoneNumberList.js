@@ -33,6 +33,6 @@ const PhoneNumberListSchema = new mongoose_1.Schema({
     },
     rawData: { type: String },
     chunks: { type: [[String]], required: true },
-    userId: { type: String, required: true },
+    userId: { type: String, default: 'system' },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('PhoneNumberList', PhoneNumberListSchema);

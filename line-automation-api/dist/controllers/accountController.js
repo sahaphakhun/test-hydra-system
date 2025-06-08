@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateJobStatus = exports.getJobById = exports.getJobs = exports.deletePhoneNumberList = exports.createPhoneNumberList = exports.getPhoneNumberLists = exports.sendMessageToGroup = exports.deleteGroup = exports.createGroup = exports.addFriends = exports.getGroupsByAccountId = exports.getAccountById = exports.getAllAccounts = void 0;
+exports.deletePhoneNumberList = exports.createPhoneNumberList = exports.getPhoneNumberLists = exports.sendMessageToGroup = exports.deleteGroup = exports.createGroup = exports.addFriends = exports.getGroupsByAccountId = exports.getAccountById = exports.getAllAccounts = void 0;
 const LineAccount_1 = require("../models/LineAccount");
 const LineGroup_1 = __importDefault(require("../models/LineGroup"));
 const PhoneNumberList_1 = __importDefault(require("../models/PhoneNumberList"));
@@ -159,24 +159,31 @@ const getPhoneNumberLists = async (req, res) => {
 exports.getPhoneNumberLists = getPhoneNumberLists;
 const createPhoneNumberList = async (req, res) => {
     try {
+        console.log('📝 Creating phone number list with data:', req.body);
         // chunks should already be grouped by the client
         const { name, inputType, rawData, chunks } = req.body;
         if (!name || !inputType || !chunks || !Array.isArray(chunks)) {
+            console.log('❌ Validation failed:', { name, inputType, chunks: Array.isArray(chunks) });
             return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
         }
         const newList = new PhoneNumberList_1.default({
             name,
             inputType,
-            rawData,
+            rawData: rawData || '',
             chunks,
-            userId: '',
+            userId: 'system', // ใช้ค่าเริ่มต้น
         });
+        console.log('💾 Saving phone number list:', newList);
         await newList.save();
+        console.log('✅ Phone number list saved successfully');
         return res.status(201).json({ message: 'สร้างชุดเบอร์โทรศัพท์สำเร็จ', list: newList });
     }
     catch (error) {
-        console.error('Error in createPhoneNumberList:', error);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างชุดเบอร์โทรศัพท์' });
+        console.error('❌ Error in createPhoneNumberList:', error);
+        return res.status(500).json({
+            message: 'เกิดข้อผิดพลาดในการสร้างชุดเบอร์โทรศัพท์',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 };
 exports.createPhoneNumberList = createPhoneNumberList;
@@ -195,61 +202,3 @@ const deletePhoneNumberList = async (req, res) => {
     }
 };
 exports.deletePhoneNumberList = deletePhoneNumberList;
-// การจัดการงาน (Jobs)
-const getJobs = async (req, res) => {
-    try {
-        const { type, accountId, status } = req.query;
-        const filter = {};
-        if (type)
-            filter.type = type;
-        if (accountId)
-            filter.accountId = accountId;
-        if (status)
-            filter.status = status;
-        const jobs = await Job_1.default.find(filter).sort({ createdAt: -1 });
-        return res.status(200).json(jobs);
-    }
-    catch (error) {
-        console.error('Error in getJobs:', error);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลงาน' });
-    }
-};
-exports.getJobs = getJobs;
-const getJobById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const job = await Job_1.default.findById(id);
-        if (!job) {
-            return res.status(404).json({ message: 'ไม่พบงานที่ระบุ' });
-        }
-        return res.status(200).json(job);
-    }
-    catch (error) {
-        console.error('Error in getJobById:', error);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลงาน' });
-    }
-};
-exports.getJobById = getJobById;
-const updateJobStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status, log } = req.body;
-        const job = await Job_1.default.findById(id);
-        if (!job) {
-            return res.status(404).json({ message: 'ไม่พบงานที่ระบุ' });
-        }
-        job.status = status;
-        if (log) {
-            job.logs.push(log);
-        }
-        await job.save();
-        // ส่ง WebSocket update
-        (0, websocket_1.broadcastMessage)('STATUS_UPDATE', { jobId: job._id, status: job.status });
-        return res.status(200).json({ message: 'อัปเดตสถานะงานสำเร็จ', job });
-    }
-    catch (error) {
-        console.error('Error in updateJobStatus:', error);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตสถานะงาน' });
-    }
-};
-exports.updateJobStatus = updateJobStatus;

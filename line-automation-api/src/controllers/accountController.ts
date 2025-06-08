@@ -156,23 +156,35 @@ export const getPhoneNumberLists = async (req: Request, res: Response) => {
 
 export const createPhoneNumberList = async (req: Request, res: Response) => {
   try {
+    console.log('📝 Creating phone number list with data:', req.body);
+    
     // chunks should already be grouped by the client
     const { name, inputType, rawData, chunks } = req.body;
+    
     if (!name || !inputType || !chunks || !Array.isArray(chunks)) {
+      console.log('❌ Validation failed:', { name, inputType, chunks: Array.isArray(chunks) });
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
+    
     const newList = new PhoneNumberList({
       name,
       inputType,
-      rawData,
+      rawData: rawData || '',
       chunks, // store provided chunks as-is
-      userId: '',
+      userId: 'system', // ใช้ค่าเริ่มต้น
     });
+    
+    console.log('💾 Saving phone number list:', newList);
     await newList.save();
+    console.log('✅ Phone number list saved successfully');
+    
     return res.status(201).json({ message: 'สร้างชุดเบอร์โทรศัพท์สำเร็จ', list: newList });
   } catch (error) {
-    console.error('Error in createPhoneNumberList:', error);
-    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างชุดเบอร์โทรศัพท์' });
+    console.error('❌ Error in createPhoneNumberList:', error);
+    return res.status(500).json({ 
+      message: 'เกิดข้อผิดพลาดในการสร้างชุดเบอร์โทรศัพท์',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 

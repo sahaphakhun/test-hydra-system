@@ -20,7 +20,7 @@ const PhoneNumberListSchema: Schema = new Schema(
     },
     rawData: { type: String },
     chunks: { type: [[String]], required: true },
-    userId: { type: String, required: true },
+    userId: { type: String, default: 'system' },
   },
   { timestamps: true }
 );

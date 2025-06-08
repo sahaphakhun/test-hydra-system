@@ -174,16 +174,16 @@ export default function NumberSetsPage() {
         setLoading(false);
         return;
       }
-      const newId = Date.now().toString() + Math.random().toString(36).slice(2);
-      const newSet: NumberSet = {
-        id: newId,
+      
+      const payload = {
         name: name.trim(),
         inputType,
         rawData: inputType === 'manual' ? manualText : fileName,
         chunks,
-        createdAt: new Date().toISOString(),
       };
-      await api.post('/number-sets', newSet);
+      
+      console.log('📤 Sending payload:', payload);
+      await api.post('/number-sets', payload);
       const res = await api.get('/phone-lists');
       const lists: NumberSet[] = res.data.map((l: any) => ({
         id: l._id,
