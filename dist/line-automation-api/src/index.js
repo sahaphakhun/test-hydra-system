@@ -9,10 +9,9 @@ const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const ws_1 = require("ws");
 const config_1 = require("./config");
-const automationRoutes_1 = __importDefault(require("../line-automation-api/src/routes/automationRoutes"));
-const accountRoutes_1 = __importDefault(require("../line-automation-api/src/routes/accountRoutes"));
-const adminRoutes_1 = __importDefault(require("../line-automation-api/src/routes/adminRoutes"));
-const automationController_1 = require("../line-automation-api/src/controllers/automationController");
+const automationRoutes_1 = __importDefault(require("./routes/automationRoutes"));
+const accountRoutes_1 = __importDefault(require("./routes/accountRoutes"));
+const automationController_1 = require("./controllers/automationController");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // ตั้งค่า CORS options สำหรับ express
@@ -31,11 +30,8 @@ app.use(express_1.default.json());
 // Routes
 app.use('/', automationRoutes_1.default);
 app.use('/', accountRoutes_1.default);
-app.use('/', adminRoutes_1.default);
 // จัดการการเชื่อมต่อ WebSocket
-wss.on('connection', function connection(ws, req) {
-    // ใช้ type assertion เพื่อให้ TypeScript ยอมรับ .on method
-    const extWs = ws;
+wss.on('connection', (ws, req) => {
     console.log('Client เชื่อมต่อ WebSocket จาก:', req.socket.remoteAddress);
     console.log('WebSocket clients ทั้งหมด:', wss.clients.size);
     // ส่งข้อความเมื่อเชื่อมต่อสำเร็จ
@@ -44,7 +40,7 @@ wss.on('connection', function connection(ws, req) {
         message: 'Connection to status server established.'
     });
     console.log('ส่งข้อความเชื่อมต่อ:', connectionMessage);
-    extWs.send(connectionMessage);
+    ws.send(connectionMessage);
     // ทดสอบส่งข้อความสถานะทันที
     setTimeout(() => {
         const testMessage = JSON.stringify({
@@ -54,18 +50,15 @@ wss.on('connection', function connection(ws, req) {
             details: { time: new Date().toISOString() }
         });
         console.log('ส่งข้อความทดสอบ:', testMessage);
-        extWs.send(testMessage);
+        ws.send(testMessage);
     }, 1000);
-    // จัดการกับข้อความที่ได้รับจาก client
-    extWs.on('message', function incoming(message) {
-        console.log('ได้รับข้อความจาก client:', message.toString());
+    ws.addEventListener('message', (event) => {
+        console.log('ได้รับข้อความจาก client:', event.data.toString());
     });
-    // จัดการกับข้อผิดพลาด
-    extWs.on('error', function error(err) {
-        console.error('WebSocket error:', err);
+    ws.addEventListener('error', (event) => {
+        console.error('WebSocket error:', event);
     });
-    // จัดการกับการปิดการเชื่อมต่อ
-    extWs.on('close', function close() {
+    ws.addEventListener('close', () => {
         console.log('Client ตัดการเชื่อมต่อ WebSocket');
         console.log('WebSocket clients เหลือ:', wss.clients.size);
     });

@@ -134,7 +134,6 @@ function HomePage() {
             setWaitingPhoneNumber(data.phoneNumber);
             setWaitStartTime(Date.now());
             setShowManualOtp(false);
-            setShowRequestOtp(false);
             // สร้างบัญชีใหม่ใน state
             const newAccount = {
                 id: data.phoneNumber,
@@ -146,7 +145,7 @@ function HomePage() {
                 createdAt: new Date().toISOString(),
             };
             setAccounts(prev => [...prev, newAccount]);
-            setMessage('เริ่มกระบวนการสมัครแล้ว');
+            setMessage('สร้างบัญชีสำเร็จ');
             setMessageType('success');
         }
         catch (error) {
@@ -176,7 +175,6 @@ function HomePage() {
             setWaitingPhoneNumber(account.phoneNumber);
             setWaitStartTime(Date.now());
             setShowManualOtp(false);
-            setShowRequestOtp(false);
             setAccounts(prev => prev.map(acc => acc.id === account.id ? Object.assign(Object.assign({}, acc), { status: 'pending' }) : acc));
             setMessage('เริ่มสมัครใหม่แล้ว');
             setMessageType('success');
@@ -184,20 +182,6 @@ function HomePage() {
         catch (error) {
             console.error('Failed to retry registration:', error);
             setMessage('ลองสมัครใหม่ไม่สำเร็จ');
-            setMessageType('error');
-        }
-    });
-    // ฟังก์ชันสำหรับขอ OTP
-    const handleRequestOtp = (phoneNumber) => __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield api_1.default.post('/automation/request-otp', { phoneNumber });
-            setMessage('ได้ขอ OTP แล้ว กรุณารอรับ SMS');
-            setMessageType('success');
-            setShowRequestOtp(false);
-        }
-        catch (error) {
-            console.error('Failed to request OTP:', error);
-            setMessage('เกิดข้อผิดพลาดในการขอ OTP');
             setMessageType('error');
         }
     });
@@ -231,7 +215,6 @@ function HomePage() {
             setWaitingPhoneNumber(otpDialog.phoneNumber);
             setWaitStartTime(Date.now());
             setShowManualOtp(false);
-            setShowRequestOtp(false);
             // ล้าง timestamp ของ OTP เพราะกรอกเสร็จแล้ว
             try {
                 localStorage.removeItem('otpWaitingData');
@@ -254,6 +237,22 @@ function HomePage() {
         const timer = setTimeout(() => setShowManualOtp(true), 60000);
         return () => clearTimeout(timer);
     }, [waitingPhoneNumber, waitStartTime]);
+    // ฟังก์ชันสำหรับขอ OTP
+    const handleRequestOtp = (phoneNumber) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield api_1.default.post('/automation/request-otp', {
+                phoneNumber: phoneNumber,
+            });
+            setMessage('ร้องขอ OTP เรียบร้อยแล้ว กรุณารอรับ SMS');
+            setMessageType('success');
+            setShowRequestOtp(false);
+        }
+        catch (error) {
+            console.error('Failed to request OTP:', error);
+            setMessage('เกิดข้อผิดพลาดในการร้องขอ OTP');
+            setMessageType('error');
+        }
+    });
     return (<material_1.Container maxWidth="lg" sx={{ py: 4 }}>
       <material_1.Box mb={4}>
         <material_1.Typography variant="h4" component="h1" gutterBottom>
@@ -298,15 +297,12 @@ function HomePage() {
         <material_1.Box textAlign="center">
           <material_1.CircularProgress color="inherit"/>
           <material_1.Typography variant="h6" mt={2}>
-            กำลังสมัคร {waitingPhoneNumber}
+            กำลังสมัครบัญชี LINE สำหรับ {waitingPhoneNumber}
           </material_1.Typography>
-          <material_1.Typography variant="body2" mt={1}>
-            ระบบกำลังดำเนินการสมัครบัญชี LINE
-          </material_1.Typography>
-          {showRequestOtp && (<material_1.Button variant="outlined" sx={{ mt: 2, color: '#fff', borderColor: '#fff' }} onClick={() => handleRequestOtp(waitingPhoneNumber)}>
-              ขอรหัส OTP
+          {showRequestOtp && waitingPhoneNumber && (<material_1.Button variant="outlined" sx={{ mt: 2, mr: 2, color: '#fff', borderColor: '#fff' }} onClick={() => handleRequestOtp(waitingPhoneNumber)}>
+              ขอ OTP
             </material_1.Button>)}
-          {showManualOtp && (<material_1.Button variant="outlined" sx={{ mt: 2, ml: 2, color: '#fff', borderColor: '#fff' }} onClick={() => {
+          {showManualOtp && (<material_1.Button variant="outlined" sx={{ mt: 2, color: '#fff', borderColor: '#fff' }} onClick={() => {
                 const account = accounts.find((a) => a.phoneNumber === waitingPhoneNumber);
                 if (account)
                     handleOpenOtp(account);

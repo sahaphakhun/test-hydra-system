@@ -54,6 +54,7 @@ export interface RegisterRequest {
   displayName: string;
   password: string;
   proxy?: string;
+  autoLogout?: boolean;
 }
 
 // ประเภทข้อมูลคำขอส่ง OTP

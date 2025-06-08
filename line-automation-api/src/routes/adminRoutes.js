@@ -28,15 +28,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-nocheck
 const express_1 = __importDefault(require("express"));
-const automationController = __importStar(require("../controllers/automationController"));
+const adminController = __importStar(require("../controllers/adminController"));
 const router = express_1.default.Router();
-// ตรวจสอบการเชื่อมต่อกับ API
-router.get('/', automationController.testConnection);
-// API สำหรับ LINE Automation
-router.post('/automation/register', automationController.registerLine);
-router.post('/automation/request-otp', automationController.requestOtp);
-router.post('/automation/submit-otp', automationController.submitOtp);
-router.post('/automation/check-proxy', automationController.checkProxy);
-router.post('/automation/status', automationController.receiveStatus);
-router.post('/logout', automationController.logout);
+// จัดการคำขอลงทะเบียน
+router.get('/admin/registration-requests', adminController.getAllRegistrationRequests);
+router.get('/admin/registration-requests/:id', adminController.getRegistrationRequestById);
+router.put('/admin/registration-requests/:id/status', adminController.updateRegistrationRequestStatus);
+router.post('/admin/registration-requests/:id/create-account', adminController.createAccountFromRequest);
+router.delete('/admin/registration-requests/:id', adminController.deleteRegistrationRequest);
 exports.default = router;

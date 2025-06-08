@@ -22,21 +22,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-// @ts-nocheck
-const express_1 = __importDefault(require("express"));
-const automationController = __importStar(require("../controllers/automationController"));
-const router = express_1.default.Router();
-// ตรวจสอบการเชื่อมต่อกับ API
-router.get('/', automationController.testConnection);
-// API สำหรับ LINE Automation
-router.post('/automation/register', automationController.registerLine);
-router.post('/automation/request-otp', automationController.requestOtp);
-router.post('/automation/submit-otp', automationController.submitOtp);
-router.post('/automation/check-proxy', automationController.checkProxy);
-router.post('/automation/status', automationController.receiveStatus);
-router.post('/logout', automationController.logout);
-exports.default = router;
+const mongoose_1 = __importStar(require("mongoose"));
+// สร้าง Schema สำหรับ LineGroup
+const LineGroupSchema = new mongoose_1.Schema({
+    name: { type: String, required: true },
+    accountId: { type: String, required: true },
+    memberCount: { type: Number, default: 1 },
+}, { timestamps: true });
+// สร้างและส่งออกโมเดล
+exports.default = mongoose_1.default.model('LineGroup', LineGroupSchema);

@@ -13,7 +13,6 @@ const links = [
     { href: '/add-friends', label: 'เพิ่มเพื่อน' },
     { href: '/number-sets', label: 'ชุดเบอร์' },
     { href: '/register', label: 'ลงทะเบียน' },
-    { href: '/admin', label: 'แอดมิน' },
 ];
 function Navbar() {
     return (<material_1.AppBar position="static" color="primary">

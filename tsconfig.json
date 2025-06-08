@@ -3,11 +3,13 @@
     "target": "es6",
     "module": "commonjs",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false
-  }
+  },
+  "include": ["line-automation-api/src/**/*"],
+  "exclude": ["node_modules", "line-automation-ui", "dist", "src"]
 } 

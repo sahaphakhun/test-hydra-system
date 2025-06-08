@@ -22,21 +22,23 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-// @ts-nocheck
-const express_1 = __importDefault(require("express"));
-const automationController = __importStar(require("../controllers/automationController"));
-const router = express_1.default.Router();
-// ตรวจสอบการเชื่อมต่อกับ API
-router.get('/', automationController.testConnection);
-// API สำหรับ LINE Automation
-router.post('/automation/register', automationController.registerLine);
-router.post('/automation/request-otp', automationController.requestOtp);
-router.post('/automation/submit-otp', automationController.submitOtp);
-router.post('/automation/check-proxy', automationController.checkProxy);
-router.post('/automation/status', automationController.receiveStatus);
-router.post('/logout', automationController.logout);
-exports.default = router;
+const mongoose_1 = __importStar(require("mongoose"));
+const RegistrationRequestSchema = new mongoose_1.Schema({
+    phoneNumber: { type: String, required: true },
+    displayName: { type: String, required: true },
+    password: { type: String, required: true },
+    proxy: { type: String },
+    autoLogout: { type: Boolean, default: true },
+    status: {
+        type: String,
+        enum: ['pending', 'processing', 'awaiting_otp', 'completed', 'failed'],
+        default: 'pending'
+    },
+    requestedAt: { type: Date, default: Date.now },
+    completedAt: { type: Date },
+    otpRequested: { type: Boolean, default: false },
+    otpRequestedAt: { type: Date },
+    adminNotes: { type: String }
+}, { timestamps: true });
+exports.default = mongoose_1.default.model('RegistrationRequest', RegistrationRequestSchema);

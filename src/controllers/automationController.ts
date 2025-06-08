@@ -43,7 +43,7 @@ export const registerLine = async (req: Request, res: Response) => {
     // หน่วงเวลาเพื่อจำลองการทำงาน
     setTimeout(() => {
       sendStatusUpdate(
-        AutomationStatus.WAITING_OTP,
+        AutomationStatus.AWAITING_OTP,
         'โปรดกรอกรหัส OTP ที่ได้รับทาง SMS',
         { phoneNumber }
       );

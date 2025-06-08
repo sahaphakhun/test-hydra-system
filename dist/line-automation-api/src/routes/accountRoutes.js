@@ -28,15 +28,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-nocheck
 const express_1 = __importDefault(require("express"));
-const automationController = __importStar(require("../controllers/automationController"));
+const accountController = __importStar(require("../controllers/accountController"));
 const router = express_1.default.Router();
-// ตรวจสอบการเชื่อมต่อกับ API
-router.get('/', automationController.testConnection);
-// API สำหรับ LINE Automation
-router.post('/automation/register', automationController.registerLine);
-router.post('/automation/request-otp', automationController.requestOtp);
-router.post('/automation/submit-otp', automationController.submitOtp);
-router.post('/automation/check-proxy', automationController.checkProxy);
-router.post('/automation/status', automationController.receiveStatus);
-router.post('/logout', automationController.logout);
+// การจัดการบัญชี LINE
+router.get('/accounts', accountController.getAllAccounts);
+router.get('/accounts/:id', accountController.getAccountById);
+// การจัดการกลุ่ม LINE
+router.get('/accounts/:accountId/groups', accountController.getGroupsByAccountId);
+// API สำหรับเพิ่มเพื่อน สร้างกลุ่ม และส่งข้อความ
+router.post('/automation/add-friends', accountController.addFriends);
+router.post('/automation/create-group', accountController.createGroup);
+router.post('/automation/send-message', accountController.sendMessageToGroup);
+// การจัดการชุดเบอร์โทรศัพท์
+router.get('/phone-lists', accountController.getPhoneNumberLists);
+router.post('/phone-lists', accountController.createPhoneNumberList);
 exports.default = router;
