@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Chip,
+  ChipProps,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,7 +25,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import {
   Visibility,
   Delete,
@@ -215,7 +216,7 @@ export default function AdminPage() {
                   <TableCell>
                     <Chip
                       label={getStatusText(request.status)}
-                      color={getStatusColor(request.status) as any}
+                      color={getStatusColor(request.status) as ChipProps['color']}
                       size="small"
                     />
                   </TableCell>
@@ -272,7 +273,7 @@ export default function AdminPage() {
         <DialogContent>
           {selectedRequest && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="เบอร์โทรศัพท์"
                   value={selectedRequest.phoneNumber}
@@ -280,7 +281,7 @@ export default function AdminPage() {
                   disabled
                 />
               </Grid>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="ชื่อแสดง"
                   value={selectedRequest.displayName}
@@ -288,7 +289,7 @@ export default function AdminPage() {
                   disabled
                 />
               </Grid>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="รหัสผ่าน"
                   value={selectedRequest.password}
@@ -297,7 +298,7 @@ export default function AdminPage() {
                   type="password"
                 />
               </Grid>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="Proxy"
                   value={selectedRequest.proxy || 'ไม่มี'}
@@ -305,7 +306,7 @@ export default function AdminPage() {
                   disabled
                 />
               </Grid>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="สถานะ"
                   value={getStatusText(selectedRequest.status)}
@@ -313,7 +314,7 @@ export default function AdminPage() {
                   disabled
                 />
               </Grid>
-              <Grid xs={12} sm={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="วันที่ขอ"
                   value={new Date(selectedRequest.requestedAt).toLocaleString('th-TH')}
@@ -322,7 +323,7 @@ export default function AdminPage() {
                 />
               </Grid>
               {selectedRequest.otpRequestedAt && (
-                <Grid xs={12} sm={6}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     label="วันที่ร้องขอ OTP"
                     value={new Date(selectedRequest.otpRequestedAt).toLocaleString('th-TH')}
@@ -331,7 +332,7 @@ export default function AdminPage() {
                   />
                 </Grid>
               )}
-              <Grid xs={12}>
+              <Grid item xs={12}>
                 <TextField
                   label="หมายเหตุของ Admin"
                   value={adminNotes}
@@ -352,14 +353,14 @@ export default function AdminPage() {
             color="warning"
             onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'processing')}
           >
-            เปลี่ยนเป็น "กำลังดำเนินการ"
+            เปลี่ยนเป็น “กำลังดำเนินการ”
           </Button>
           <Button
             variant="contained"
             color="error"
             onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'failed')}
           >
-            เปลี่ยนเป็น "ล้มเหลว"
+            เปลี่ยนเป็น “ล้มเหลว”
           </Button>
         </DialogActions>
       </Dialog>
@@ -369,7 +370,7 @@ export default function AdminPage() {
         <DialogTitle>สร้างบัญชี LINE</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid xs={12}>
+            <Grid item xs={12}>
               <TextField
                 label="ชื่อแสดงจริง (จาก LINE)"
                 value={actualDisplayName}
@@ -378,7 +379,7 @@ export default function AdminPage() {
                 required
               />
             </Grid>
-            <Grid xs={12}>
+            <Grid item xs={12}>
               <TextField
                 label="รหัสผ่านจริง (จาก LINE)"
                 value={actualPassword}
