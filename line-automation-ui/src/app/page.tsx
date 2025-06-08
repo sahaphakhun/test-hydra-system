@@ -160,9 +160,12 @@ export default function HomePage() {
    * เปิด dialog เพื่อกรอก OTP สำหรับเบอร์โทรศัพท์ที่ระบุ
    */
   const handleOpenOtp = (account: Account) => {
-    setOtpDialog({ phoneNumber: account.phoneNumber, open: true });
-    // เมื่อเปิด dialog ด้วยตนเอง เราไม่ต้องการ backdrop waiting
+    const now = Date.now();
+    setOtpDialog({ phoneNumber: account.phoneNumber, open: true, startTime: now });
+    // ยกเลิกการแสดง Backdrop ระหว่างกรอก OTP
     setWaitingPhoneNumber(null);
+    // เก็บ timestamp เพื่อให้รีเฟรชหน้าคง countdown
+    try { localStorage.setItem('otpWaitingData', JSON.stringify({ phoneNumber: account.phoneNumber, startTime: now })); } catch {}
   };
 
   const handleSubmitOtp = async (otp: string) => {
@@ -177,7 +180,11 @@ export default function HomePage() {
       setOtpDialog({ phoneNumber: '', open: false });
       // อัปเดตสถานะบัญชีให้ pending อีกครั้ง รอผลลัพธ์สุดท้าย
       setAccounts(prev => prev.map(acc => acc.phoneNumber === otpDialog.phoneNumber ? { ...acc, status: 'pending' } : acc));
-      // ล้าง timestamp
+
+      // แสดง Backdrop ระหว่างรอผลลัพธ์หลังส่ง OTP
+      setWaitingPhoneNumber(otpDialog.phoneNumber);
+
+      // ล้าง timestamp ของ OTP เพราะกรอกเสร็จแล้ว
       try { localStorage.removeItem('otpWaitingData'); } catch {}
     } catch (error) {
       console.error('ส่ง OTP ไม่สำเร็จ', error);

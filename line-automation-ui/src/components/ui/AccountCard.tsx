@@ -96,16 +96,18 @@ export default function AccountCard({ account, onEdit, onDelete, onEnterOtp }: A
           สร้างเมื่อ: {new Date(account.createdAt).toLocaleDateString('th-TH')}
         </Typography>
 
-        {/* ปุ่มสำหรับกรอก OTP */}
-        <Box mt={2}>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => onEnterOtp?.(account)}
-          >
-            กรอก OTP
-          </Button>
-        </Box>
+        {/* ปุ่มสำหรับกรอก OTP เฉพาะเมื่อสถานะรอ OTP */}
+        {account.status === 'awaitingOtp' && (
+          <Box mt={2}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => onEnterOtp?.(account)}
+            >
+              กรอก OTP
+            </Button>
+          </Box>
+        )}
       </CardContent>
 
       <Menu
