@@ -72,12 +72,16 @@ export const addFriends = async (req: Request, res: Response) => {
 
 export const createGroup = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
-    if (!name) {
+    const { name, accountId } = req.body;
+    if (!name || !accountId) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    const job = await createJob('create_group', undefined, { name });
-    const newGroup = new LineGroup({ name, accountId: '', memberCount: 0 });
+    const account = await LineAccount.findById(accountId);
+    if (!account) {
+      return res.status(404).json({ message: 'ไม่พบบัญชีที่ระบุ' });
+    }
+    const job = await createJob('create_group', accountId, { name });
+    const newGroup = new LineGroup({ name, accountId, memberCount: 0 });
     await newGroup.save();
     await updateJobStatus(job, 'completed');
     return res.status(201).json({ message: 'สร้างกลุ่มสำเร็จ', group: newGroup, jobId: job._id });

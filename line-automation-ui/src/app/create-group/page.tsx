@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Typography, TextField, Button, Stack, Snackbar, Alert } from '@mui/material';
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Stack,
+  Snackbar,
+  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from '@mui/material';
 import api from '@/lib/api';
 
 export default function CreateGroupPage() {
@@ -10,6 +22,8 @@ export default function CreateGroupPage() {
   const [message, setMessage] = useState<string | boolean>(false);
   const [jobId, setJobId] = useState('');
   const [jobStatus, setJobStatus] = useState('');
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState('');
 
   useEffect(() => {
     if (!jobId) return;
@@ -27,11 +41,24 @@ export default function CreateGroupPage() {
     return () => ws.close();
   }, [jobId]);
 
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await api.get('/accounts');
+        setAccounts(res.data);
+        if (res.data.length > 0) setAccountId(res.data[0]._id);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAccounts();
+  }, []);
+
   const handleSubmit = async () => {
-    if (!groupName.trim()) return;
+    if (!groupName.trim() || !accountId) return;
     setLoading(true);
     try {
-      const res = await api.post('/create-group', { name: groupName });
+      const res = await api.post('/create-group', { name: groupName, accountId });
       setMessage('สร้างกลุ่มสำเร็จ');
       setGroupName('');
       if (res.data.jobId) setJobId(res.data.jobId);
@@ -48,6 +75,21 @@ export default function CreateGroupPage() {
         สร้างกลุ่ม LINE
       </Typography>
       <Stack spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel id="account-select-label">บัญชี LINE</InputLabel>
+          <Select
+            labelId="account-select-label"
+            label="บัญชี LINE"
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value as string)}
+          >
+            {accounts.map((acc) => (
+              <MenuItem key={acc._id} value={acc._id}>
+                {acc.displayName || acc.userId}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <TextField
           label="ชื่อกลุ่ม"
           value={groupName}
