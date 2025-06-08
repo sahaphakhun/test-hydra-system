@@ -9,7 +9,7 @@ const links = [
   { href: '/create-group', label: 'สร้างกลุ่ม' },
   { href: '/add-friends', label: 'เพิ่มเพื่อน' },
   { href: '/number-sets', label: 'ชุดเบอร์' },
-  { href: '/register', label: 'ลงทะเบียน' },
+  { href: '/adminn', label: 'แอดมิน' },
 ];
 
 export default function Navbar() {
