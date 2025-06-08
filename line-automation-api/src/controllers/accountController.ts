@@ -133,11 +133,18 @@ export const getPhoneNumberLists = async (req: Request, res: Response) => {
 
 export const createPhoneNumberList = async (req: Request, res: Response) => {
   try {
+    // chunks should already be grouped by the client
     const { name, inputType, rawData, chunks } = req.body;
     if (!name || !inputType || !chunks || !Array.isArray(chunks)) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    const newList = new PhoneNumberList({ name, inputType, rawData, chunks, userId: '' });
+    const newList = new PhoneNumberList({
+      name,
+      inputType,
+      rawData,
+      chunks, // store provided chunks as-is
+      userId: '',
+    });
     await newList.save();
     return res.status(201).json({ message: 'สร้างชุดเบอร์โทรศัพท์สำเร็จ', list: newList });
   } catch (error) {

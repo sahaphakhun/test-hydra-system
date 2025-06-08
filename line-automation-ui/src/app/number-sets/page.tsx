@@ -26,7 +26,6 @@ export default function NumberSetsPage() {
   const [manualText, setManualText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
-  const [groupSize, setGroupSize] = useState(100);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [sets, setSets] = useState<NumberSet[]>([]);
@@ -87,13 +86,19 @@ export default function NumberSetsPage() {
       return;
     }
     setLoading(true);
-    let numbers: string[] = [];
+    let chunks: string[][] = [];
     try {
       if (inputType === 'manual') {
-        numbers = manualText
+        const lines = manualText
           .split(/\r?\n/)
-          .map(n => n.trim())
-          .filter(n => n);
+          .map(l => l.trim())
+          .filter(l => l);
+        chunks = lines.map(line =>
+          line
+            .split(/[,\s]+/)
+            .map(n => n.trim())
+            .filter(n => n)
+        );
       } else if (inputType === 'text') {
         if (!file) {
           setMessage('กรุณาเลือกไฟล์ .txt');
@@ -102,10 +107,16 @@ export default function NumberSetsPage() {
           return;
         }
         const text = await file.text();
-        numbers = text
+        const lines = text
           .split(/\r?\n/)
-          .map(n => n.trim())
-          .filter(n => n);
+          .map(l => l.trim())
+          .filter(l => l);
+        chunks = lines.map(line =>
+          line
+            .split(/[,\s]+/)
+            .map(n => n.trim())
+            .filter(n => n)
+        );
       } else if (inputType === 'vcf') {
         if (!file) {
           setMessage('กรุณาเลือกไฟล์ .vcf');
@@ -115,20 +126,17 @@ export default function NumberSetsPage() {
         }
         const text = await file.text();
         const lines = text.split(/\r?\n/);
-        numbers = lines
+        const numbers = lines
           .filter(line => /^TEL[:;]/i.test(line))
           .map(line => line.split(':').pop()?.trim() || '')
           .filter(n => n);
+        chunks = numbers.map(n => [n]);
       }
-      if (numbers.length === 0) {
+      if (chunks.length === 0) {
         setMessage('ไม่พบเบอร์ใดๆ');
         setMessageType('error');
         setLoading(false);
         return;
-      }
-      const chunks: string[][] = [];
-      for (let i = 0; i < numbers.length; i += groupSize) {
-        chunks.push(numbers.slice(i, i + groupSize));
       }
       const newId = Date.now().toString() + Math.random().toString(36).slice(2);
       const newSet: NumberSet = {
@@ -157,7 +165,6 @@ export default function NumberSetsPage() {
       setManualText('');
       setFile(null);
       setFileName('');
-      setGroupSize(100);
     } catch (error) {
       console.error(error);
       setMessage('เกิดข้อผิดพลาด');
@@ -195,8 +202,8 @@ export default function NumberSetsPage() {
 
         {inputType === 'manual' && (
           <TextField
-            label="กรอกเบอร์ทีละบรรทัด"
-            placeholder="0812345678"
+            label="กรอกชุดเบอร์ (หนึ่งชุดต่อบรรทัด)"
+            placeholder="0812345678,0912345678"
             multiline
             rows={6}
             value={manualText}
@@ -219,14 +226,6 @@ export default function NumberSetsPage() {
         {fileName && (
           <Typography variant="body2">ไฟล์: {fileName}</Typography>
         )}
-
-        <TextField
-          label="แยกเป็นชุดละกี่เบอร์"
-          type="number"
-          value={groupSize}
-          onChange={e => setGroupSize(Number(e.target.value) || 1)}
-          fullWidth
-        />
 
         <Button variant="contained" onClick={handleSubmit} disabled={loading}>
           {loading ? 'กำลังบันทึก...' : 'ดำเนินการต่อ'}
