@@ -115,15 +115,29 @@ export const getPhoneNumberLists = async (req: Request, res: Response) => {
 
 export const createPhoneNumberList = async (req: Request, res: Response) => {
   try {
-    const { name, phoneNumbers } = req.body;
-    if (!name || !phoneNumbers || !Array.isArray(phoneNumbers)) {
+    const { name, inputType, rawData, chunks } = req.body;
+    if (!name || !inputType || !chunks || !Array.isArray(chunks)) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    const newList = new PhoneNumberList({ name, phoneNumbers, userId: '' });
+    const newList = new PhoneNumberList({ name, inputType, rawData, chunks, userId: '' });
     await newList.save();
     return res.status(201).json({ message: 'สร้างชุดเบอร์โทรศัพท์สำเร็จ', list: newList });
   } catch (error) {
     console.error('Error in createPhoneNumberList:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสร้างชุดเบอร์โทรศัพท์' });
   }
-}; 
+};
+
+export const deletePhoneNumberList = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleted = await PhoneNumberList.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'ไม่พบชุดเบอร์โทรศัพท์' });
+    }
+    return res.status(200).json({ message: 'ลบชุดเบอร์โทรศัพท์สำเร็จ' });
+  } catch (error) {
+    console.error('Error in deletePhoneNumberList:', error);
+    return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบชุดเบอร์โทรศัพท์' });
+  }
+};

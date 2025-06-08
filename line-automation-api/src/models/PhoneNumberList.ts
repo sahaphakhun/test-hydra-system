@@ -2,7 +2,9 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPhoneNumberList extends Document {
   name: string;
-  phoneNumbers: string[];
+  inputType: 'manual' | 'text' | 'vcf';
+  rawData?: string;
+  chunks: string[][];
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -11,7 +13,13 @@ export interface IPhoneNumberList extends Document {
 const PhoneNumberListSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    phoneNumbers: { type: [String], required: true },
+    inputType: {
+      type: String,
+      enum: ['manual', 'text', 'vcf'],
+      required: true,
+    },
+    rawData: { type: String },
+    chunks: { type: [[String]], required: true },
     userId: { type: String, required: true },
   },
   { timestamps: true }

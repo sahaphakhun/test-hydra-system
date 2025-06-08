@@ -16,5 +16,6 @@ router.post('/send-message', accountController.sendMessageToGroup);
 // การจัดการชุดเบอร์โทรศัพท์
 router.get('/phone-lists', accountController.getPhoneNumberLists);
 router.post('/number-sets', accountController.createPhoneNumberList);
+router.delete('/phone-lists/:id', accountController.deletePhoneNumberList);
 
 export default router; 
