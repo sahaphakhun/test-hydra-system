@@ -10,6 +10,7 @@ router.get('/accounts/:id', accountController.getAccountById);
 // การจัดการกลุ่ม และเพื่อน
 router.get('/accounts/:accountId/groups', accountController.getGroupsByAccountId);
 router.post('/add-friends', accountController.addFriends);
+router.get('/add-friends-jobs', accountController.getAddFriendJobs);
 router.post('/create-group', accountController.createGroup);
 router.post('/send-message', accountController.sendMessageToGroup);
 

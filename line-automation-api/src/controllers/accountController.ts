@@ -2,6 +2,21 @@ import { Request, Response } from 'express';
 import { LineAccount } from '../models/LineAccount';
 import LineGroup from '../models/LineGroup';
 import PhoneNumberList from '../models/PhoneNumberList';
+import { broadcastMessage } from '../websocket';
+
+interface AddFriendJob {
+  id: string;
+  accountId: string;
+  total: number;
+  processed: number;
+  status: 'running' | 'completed';
+}
+
+const addFriendJobs: Record<string, AddFriendJob> = {};
+
+export const getAddFriendJobs = (req: Request, res: Response) => {
+  res.json(Object.values(addFriendJobs));
+};
 
 export const getAllAccounts = async (req: Request, res: Response) => {
   try {
@@ -40,12 +55,35 @@ export const getGroupsByAccountId = async (req: Request, res: Response) => {
 
 export const addFriends = async (req: Request, res: Response) => {
   try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    const { accountId, ids } = req.body;
+    if (!accountId || !ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: 'กรุณาระบุข้อมูลให้ครบถ้วน' });
     }
-    // ในสถานการณ์จริงจะต้องมีการสั่งงาน Automation Runner ให้เพิ่มเพื่อน
-    return res.status(200).json({ message: `เพิ่มเพื่อนสำเร็จ ${ids.length} รายการ`, addedCount: ids.length });
+
+    const jobId = Date.now().toString();
+    const job: AddFriendJob = {
+      id: jobId,
+      accountId,
+      total: ids.length,
+      processed: 0,
+      status: 'running',
+    };
+    addFriendJobs[jobId] = job;
+
+    broadcastMessage('ADD_FRIENDS_UPDATE', job);
+
+    ids.forEach((id: string, index: number) => {
+      setTimeout(() => {
+        job.processed = index + 1;
+        broadcastMessage('ADD_FRIENDS_UPDATE', { ...job });
+        if (job.processed === job.total) {
+          job.status = 'completed';
+          broadcastMessage('ADD_FRIENDS_UPDATE', { ...job });
+        }
+      }, (index + 1) * 500);
+    });
+
+    return res.status(202).json({ jobId });
   } catch (error) {
     console.error('Error in addFriends:', error);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการเพิ่มเพื่อน' });

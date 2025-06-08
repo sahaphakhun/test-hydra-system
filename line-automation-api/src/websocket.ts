@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 const clients = new Set<WebSocket>();
 
 // ประเภทข้อความที่ส่งผ่าน WebSocket
-type WSMessageType = 'NOTIFICATION' | 'STATUS_UPDATE' | 'ERROR';
+type WSMessageType = 'NOTIFICATION' | 'STATUS_UPDATE' | 'ERROR' | 'ADD_FRIENDS_UPDATE';
 
 // โครงสร้างข้อความ WebSocket
 interface WSMessage {

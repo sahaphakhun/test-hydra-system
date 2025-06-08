@@ -50,6 +50,14 @@ interface RegistrationRequest {
   adminNotes?: string;
 }
 
+interface FriendJob {
+  id: string;
+  accountId: string;
+  total: number;
+  processed: number;
+  status: string;
+}
+
 const statusOptions = [
   { value: "all", label: "ทั้งหมด" },
   { value: "pending", label: "รอดำเนินการ" },
@@ -74,6 +82,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [friendJobs, setFriendJobs] = useState<FriendJob[]>([]);
 
   // โหลดข้อมูล
   const fetchRequests = async () => {
@@ -106,6 +115,17 @@ export default function AdminPage() {
         const data = JSON.parse(event.data);
         if (data.type === "statusUpdate" && (data.phoneNumber || data.details?.requestId)) {
           fetchRequests();
+        }
+        if (data.type === "addFriendsUpdate") {
+          setFriendJobs(prev => {
+            const idx = prev.findIndex(j => j.id === data.payload.id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], ...data.payload };
+              return updated;
+            }
+            return [...prev, data.payload];
+          });
         }
       } catch {}
     };
@@ -265,6 +285,31 @@ export default function AdminPage() {
           }}
         />
       </Stack>
+      {friendJobs.length > 0 && (
+        <Box mb={3}>
+          <Typography variant="h6" gutterBottom>งานเพิ่มเพื่อน</Typography>
+          <TableContainer component={Paper} sx={{ mb: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Account</TableCell>
+                  <TableCell>Progress</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {friendJobs.map(job => (
+                  <TableRow key={job.id}>
+                    <TableCell>{job.accountId}</TableCell>
+                    <TableCell>{job.processed}/{job.total}</TableCell>
+                    <TableCell>{job.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
