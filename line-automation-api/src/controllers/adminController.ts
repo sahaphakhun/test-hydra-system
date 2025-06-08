@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import RegistrationRequest from '../models/RegistrationRequest';
-import { LineAccount } from '../models/LineAccount';
+import { LineAccount } from '../models/lineAccount';
 
 export const getAllRegistrationRequests = async (req: Request, res: Response) => {
   try {

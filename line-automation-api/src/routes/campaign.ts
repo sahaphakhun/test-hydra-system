@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Campaign, ICampaign, CampaignStatus } from '../models/campaign';
-import { LineAccount } from '../models/LineAccount';
+import { LineAccount } from '../models/lineAccount';
 import { MessageTemplate } from '../models/messageTemplate';
 import { LineConfig } from '../models/lineConfig';
 import mongoose from 'mongoose';

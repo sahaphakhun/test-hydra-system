@@ -7,7 +7,7 @@ const router = express.Router();
 // รับบัญชี LINE ทั้งหมด
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { lineConfigId, tag, limit = 10, page = 1 } = req.query;
+    const { lineConfigId, tag, limit = 10, page = 1 }: { lineConfigId?: string; tag?: string; limit?: string | number; page?: string | number } = req.query;
     
     // สร้างตัวกรอง
     const filter: any = {};

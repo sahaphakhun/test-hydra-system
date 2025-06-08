@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { LineAccount } from '../models/LineAccount';
+import { LineAccount } from '../models/lineAccount';
 import LineGroup from '../models/LineGroup';
 import PhoneNumberList from '../models/PhoneNumberList';
 
