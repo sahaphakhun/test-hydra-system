@@ -1,89 +1,62 @@
 import express from 'express';
-import http from 'http';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { SERVER_CONFIG, DB_CONFIG } from './config';
-import automationRoutes from './routes/automationRoutes';
-import accountRoutes from './routes/accountRoutes';
-import adminRoutes from './routes/adminRoutes';
-import { setWebSocketServer } from './controllers/automationController';
+import { registerRoutes } from './routes';
+import { setupWebSocketHandlers } from './websocket';
 
+// โหลดค่าจาก .env
+dotenv.config();
+
+// กำหนดค่าเริ่มต้น
+const PORT = process.env.PORT || 3000;
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/line-automation';
+
+// สร้าง Express app
 const app = express();
-const server = http.createServer(app);
 
-// ตั้งค่า CORS options สำหรับ express
-const corsOptions = {
-  origin: SERVER_CONFIG.CORS_ORIGIN,
-  methods: ['GET', 'POST', 'OPTIONS'],
-};
-// Enable CORS for Express
-app.use(cors(corsOptions));
-
-// ตั้งค่า WebSocket Server
-const wss = new WebSocketServer({ server });
-
-// ส่ง WebSocket server instance ให้กับ controller
-setWebSocketServer(wss);
-
-// Middleware
+// middleware
+app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/', automationRoutes);
-app.use('/', accountRoutes);
-app.use('/', adminRoutes);
-
-// จัดการการเชื่อมต่อ WebSocket
-wss.on('connection', (ws: WebSocket, req: any) => {
-  console.log('Client เชื่อมต่อ WebSocket จาก:', req.socket.remoteAddress);
-  console.log('WebSocket clients ทั้งหมด:', wss.clients.size);
-  
-  // ส่งข้อความเมื่อเชื่อมต่อสำเร็จ
-  const connectionMessage = JSON.stringify({
-    type: 'connection',
-    message: 'Connection to status server established.'
-  });
-  console.log('ส่งข้อความเชื่อมต่อ:', connectionMessage);
-  ws.send(connectionMessage);
-  
-  // ทดสอบส่งข้อความสถานะทันที
-  setTimeout(() => {
-    const testMessage = JSON.stringify({
-      type: 'statusUpdate',
-      status: 'test',
-      message: 'ทดสอบการเชื่อมต่อ WebSocket',
-      details: { time: new Date().toISOString() }
-    });
-    console.log('ส่งข้อความทดสอบ:', testMessage);
-    ws.send(testMessage);
-  }, 1000);
-  
-  ws.addEventListener('message', (event) => {
-    console.log('ได้รับข้อความจาก client:', event.data.toString());
-  });
-  
-  ws.addEventListener('error', (event) => {
-    console.error('WebSocket error:', event);
-  });
-  
-  ws.addEventListener('close', () => {
-    console.log('Client ตัดการเชื่อมต่อ WebSocket');
-    console.log('WebSocket clients เหลือ:', wss.clients.size);
-  });
-});
+// สร้าง HTTP server จาก Express app
+const server = createServer(app);
 
 // เชื่อมต่อกับ MongoDB
-mongoose
-  .connect(DB_CONFIG.MONGO_URL)
+mongoose.connect(MONGO_URL)
   .then(() => {
-    console.log('เชื่อมต่อกับ MongoDB สำเร็จ');
-    
-    // เริ่ม HTTP Server โดยใช้พอร์ตจาก SERVER_CONFIG
-    server.listen(SERVER_CONFIG.PORT, () => {
-      console.log(`API Server กำลังทำงานที่พอร์ต ${SERVER_CONFIG.PORT}`);
-    });
+    console.log('✅ เชื่อมต่อกับ MongoDB สำเร็จ');
   })
   .catch((error) => {
-    console.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับ MongoDB:', error);
-  }); 
+    console.error('❌ เชื่อมต่อกับ MongoDB ล้มเหลว:', error);
+    process.exit(1);
+  });
+
+// ลงทะเบียน routes
+registerRoutes(app);
+
+// ตั้งค่า WebSocket
+const wss = new WebSocketServer({ server });
+setupWebSocketHandlers(wss);
+
+// เริ่มต้น server
+server.listen(PORT, () => {
+  console.log(`🚀 Server เริ่มทำงานที่ http://localhost:${PORT}`);
+});
+
+// จัดการการปิดเซิร์ฟเวอร์อย่างสง่างาม
+process.on('SIGINT', () => {
+  console.log('👋 ปิด server');
+  mongoose.connection.close()
+    .then(() => {
+      console.log('✅ ปิดการเชื่อมต่อ MongoDB');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ ปิดการเชื่อมต่อ MongoDB ล้มเหลว:', error);
+      process.exit(1);
+    });
+}); 

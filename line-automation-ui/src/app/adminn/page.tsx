@@ -386,6 +386,13 @@ export default function AdminPage() {
           </Button>
           <Button
             variant="contained"
+            color="secondary"
+            onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'awaiting_otp')}
+          >
+            เปลี่ยนเป็น "รอ OTP"
+          </Button>
+          <Button
+            variant="contained"
             color="error"
             onClick={() => handleUpdateStatus(selectedRequest?._id || '', 'failed')}
           >
